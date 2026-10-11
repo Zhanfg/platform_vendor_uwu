@@ -71,7 +71,7 @@ if any original APK or ROM build ID has changed. Rebuild and revalidate our
 UI changes for the new OTA. Never blindly remount a previous ROM's SystemUI.
 
 **Scope limits**:
-- Applies only to four known `system_ext/priv-app` APK paths; no generic
+- Applies only to five known `system_ext/priv-app` APK paths; no generic
   platform APK replacement or untrusted path input.
 - Does not provide an instant code hot-swap: a privileged APK replacement
   generally requires at least a controlled restart to take effect.
@@ -97,7 +97,7 @@ The OTA guard now permits mounting only when all these checks succeed:
   mode; the legacy post-fs-data fallback has different `skip_mount` semantics).
 - Mountify is enabled, its persisted `config.sh` is present and either
   `mountify_mounts=2` (automatic) or `mountify_mounts=1` **and** the
-  single hotfix ID `uwu-ui-hotfix` is in `modules.txt`.
+  single hotfix ID `uwu-ui-live-hotfix` is in `modules.txt`.
 - The active original ROM APK hash, device/API and build ID match the manifest.
 - The module does not already have `skip_mount` from a previous pause.
 
@@ -107,28 +107,29 @@ the module. It does not touch the A/B slot, recovery, AVB, or signing checks.
 
 ### Single-ZIP module, optimized for Mountify TMPFS
 
-**One installation, one KernelSU module (`id=uwu-ui-hotfix`).** The
-host-side no-argument packager creates exactly one compressed file:
-`out/uwu-ui-hotfix-oneplus6.zip`. Within it, there is one
-`system/system_ext/priv-app/<Component>/<Component>.apk` for each
-**modified** and successfully verified APK. Files byte-identical to
-the installed ROM are omitted entirely. No backup APK or second copy of
-the original ROM is included in the module.
+**One installation, one KernelSU module (`id=uwu-ui-live-hotfix`).**
+The exact native release is named `uwuAOSP hotfix v0.7.zip`. Its
+no-argument packager REQUIRES FIVE modified and cert-matched APKs:
+SystemUI, Settings, Launcher3QuickStep, uwuSettingsExt and ThemePicker.
+All five must be compiled against the locked ROM101 source; missing,
+unchanged, stale, unsigned or differently-signed payloads prevent release.
+No original APK backups are duplicated in the module.
 
-Run the installed `action.sh` in an **interactive root shell with no
-arguments** to display four components and toggle one at a time. In a
-KernelSU manager Action interface that does not supply interactive stdin,
-the same script displays current status without applying a toggle. The toggle uses a same-filesystem
-rename between `system/...` and `inactive/system/...`; only the
-active `system/` subtree is copied into Mountify TMPFS. This operation
-changes **next boot** only and never edits the ROM partition. It does not
-clear the global `skip_mount` OTA-compatibility lock. On an upstream
-OTA mismatch the whole single module is conservatively paused until a
-revalidated update is installed.
+The KernelSU `action.sh` is now strictly **read-only**, reporting
+the five staged packages, OTA guard, and live mount status. It never
+toggles individual APKs: an incomplete mix can break SystemUI and
+Material Expressive layouts. Use the **single KernelSU module enable/disable
+control** as an atomic rollback switch. The module must be valid before
+Mountify TMPFS mounts the `system/` subtree.
+
+Existing `uwuPrism` resource overlay is **not** overwritten; it is a
+separately signed ROM101 product resource whose exact hash is checked
+before any native APK mount. Changing ROM build ID, APKs or Prism
+suspends the entire module via a sticky `skip_mount` guard.
 
 **RAM and storage tradeoffs**:
 - On-phone installation uses one expanded copy of each included APK in
-  `/data/adb/modules/uwu-ui-hotfix/system`, plus Mountify's separate
+  `/data/adb/modules/uwu-ui-live-hotfix/system`, plus Mountify's separate
   TMPFS-backed copy while mounted. A combined ZIP alone **does not**
   reduce the sum of the active APK bytes in TMPFS.
 - Only enabled components belong in the active `system/` tree; disabled
