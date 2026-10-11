@@ -29,7 +29,7 @@ keytool -genkeypair -noprompt -alias overlay -keyalg RSA -keysize 2048 \
     --ks-pass pass:changeit --key-pass pass:changeit \
     --out "$WORK/uwuGesturePillRRO.apk" "$WORK/rro-aligned.apk"
 "$APKSIGNER" verify --verbose "$WORK/uwuGesturePillRRO.apk"
-"$AAPT2" dump xmltree "$WORK/uwuGesturePillRRO.apk" AndroidManifest.xml > "$WORK/manifest-dump.txt"
+"$AAPT2" dump xmltree --file AndroidManifest.xml "$WORK/uwuGesturePillRRO.apk" > "$WORK/manifest-dump.txt"
 grep -q 'com.android.systemui' "$WORK/manifest-dump.txt" || {
     echo 'Wrong RRO target' >&2; exit 4;
 }
