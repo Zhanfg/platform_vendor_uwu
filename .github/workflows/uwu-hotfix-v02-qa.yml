@@ -1,0 +1,45 @@
+name: uwuAOSP hotfix v0.2 QA
+
+on:
+  push:
+    branches: ["feat/op6-hotfix-v02-stability"]
+    paths:
+      - "tools/ui-deployment/op6-hotfix-v02/**"
+      - ".github/workflows/uwu-hotfix-v02-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/op6-hotfix-v02/**"
+      - ".github/workflows/uwu-hotfix-v02-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/op6-hotfix-v02
+          sparse-checkout-cone-mode: true
+      - name: POSIX shell syntax
+        run: |
+          for f in tools/ui-deployment/op6-hotfix-v02/*.sh; do sh -n "$f"; done
+      - name: Simulated boot, upgrade, uninstall and failure recovery
+        run: python3 -m unittest discover -s tools/ui-deployment/op6-hotfix-v02/tests -p "test_hotfix_v02.py" -v
+      - name: Build the exact installation ZIP
+        run: |
+          sh tools/ui-deployment/op6-hotfix-v02/package.sh
+          unzip -t "tools/ui-deployment/op6-hotfix-v02/out/uwuAOSP hotfix v0.2.zip"
+          if unzip -Z1 "tools/ui-deployment/op6-hotfix-v02/out/uwuAOSP hotfix v0.2.zip" | grep '^system/'; then
+              echo 'Unexpected system overlay files'; exit 1
+          fi
+      - name: Publish CI-tested ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: uwuAOSP-hotfix-v0.2
+          path: tools/ui-deployment/op6-hotfix-v02/out/uwuAOSP hotfix v0.2.zip
+          if-no-files-found: error
