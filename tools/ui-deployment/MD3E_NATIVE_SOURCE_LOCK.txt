@@ -71,3 +71,17 @@ uwu-sdk patch=tools/ui-deployment/patches/uwu-sdk-md3e-switch-contrast.patch
   no LSP hook, no direct runtime apk mutation, no SystemUI restart.
   GitHub pinned-upstream apply/check and 4 source QA tests pass.
   Full Android 17 native compilation and matching original APK signing pending.
+
+MD3E shared search and text input parity (native Compose, pending build):
+uwu-sdk patch=tools/ui-deployment/patches/uwu-sdk-md3e-input-tonal-focus.patch
+  SettingsSearchField.kt: remember one MutableInteractionSource and derive focused
+  state via collectIsFocusedAsState(), no polling/coroutines or SystemUI hooks.
+  Unifies search fill to Material dynamic surfaceContainerHigh; draws primary
+  2dp border only on focus and an outlineVariant 1dp border when unfocused.
+  TextInputPreferenceDialog.kt: matches dynamic surfaceContainerHigh fill and
+  outlineVariant unfocused indicator, preserving error and focused primary colors.
+  Keeps existing search/input geometry, one-line entry, IME and semantics intact.
+  Exact upstream uwu-sdk HEAD 75c696d97527dfbf5fd89471ae6ea1a13aeee4fd.
+  Pinned CI git apply and native-source contracts pass; Android 17 resource
+  linking and final signed APK replacement remain unverified.
+

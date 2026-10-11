@@ -1,0 +1,51 @@
+name: OP6 Native MD3E Input Focus QA
+
+on:
+  push:
+    branches: ["fix/op6-native-packager-identity-guard"]
+    paths:
+      - "tools/ui-deployment/patches/uwu-sdk-md3e-input-tonal-focus.patch"
+      - "tools/ui-deployment/prepare_native_sources.sh"
+      - "tools/ui-deployment/tests/test_md3e_input_focus.py"
+      - ".github/workflows/op6-md3e-input-native-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/patches/uwu-sdk-md3e-input-tonal-focus.patch"
+      - "tools/ui-deployment/prepare_native_sources.sh"
+      - "tools/ui-deployment/tests/test_md3e_input_focus.py"
+      - ".github/workflows/op6-md3e-input-native-qa.yml"
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/patches/uwu-sdk-md3e-input-tonal-focus.patch
+            tools/ui-deployment/prepare_native_sources.sh
+            tools/ui-deployment/tests/test_md3e_input_focus.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: uwuAOSP/platform_uwu-sdk
+          ref: 75c696d97527dfbf5fd89471ae6ea1a13aeee4fd
+          path: uwu-sdk
+          filter: blob:none
+          sparse-checkout: |
+            uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSearchField.kt
+            uwuCompose/src/org/uwuaosp/compose/settingslib/TextInputPreferenceDialog.kt
+          sparse-checkout-cone-mode: false
+      - name: Apply patch to exact upstream code and verify clean reverse
+        run: |
+          test "$(git -C uwu-sdk rev-parse HEAD)" = 75c696d97527dfbf5fd89471ae6ea1a13aeee4fd
+          PATCH="$GITHUB_WORKSPACE/tools/ui-deployment/patches/uwu-sdk-md3e-input-tonal-focus.patch"
+          git -C uwu-sdk apply --check "$PATCH"
+          git -C uwu-sdk apply "$PATCH"
+          git -C uwu-sdk apply --reverse --check "$PATCH"
+          sh -n tools/ui-deployment/prepare_native_sources.sh
+      - name: Verify shared tonal and focus component contracts
+        run: python3 -m unittest discover -s tools/ui-deployment/tests -p 'test_md3e_input_focus.py' -v

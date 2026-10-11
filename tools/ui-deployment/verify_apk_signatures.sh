@@ -10,7 +10,7 @@ BUILT="$STAGE/built"
 OUT="$STAGE/signature-check.tsv"
 umask 077
 
-for tool in apksigner sha256sum sed tr; do
+for tool in apksigner aapt2 sha256sum sed tr; do
     command -v "$tool" >/dev/null 2>&1 || { echo "Missing required command: $tool" >&2; exit 2; }
 done
 [ -d "$ORIGINAL" ] && [ -d "$BUILT" ] || {
@@ -35,8 +35,20 @@ digest() {
     printf '%s\n' "$hash"
 }
 
+# A matching signing certificate alone does NOT prove an APK is the expected
+# Android package. Swapping in an unrelated platform-signed APK can leave
+# SystemUI or Settings unable to start. Verify package identity before mount.
+package_name() {
+    output=$(aapt2 dump packagename "$1" 2>/dev/null) || return 1
+    # aapt2 prints exactly one package name; never parse a free-form APK label.
+    case "$output" in
+        ''|*[!a-zA-Z0-9._]*) return 1 ;;
+    esac
+    printf '%s\n' "$output"
+}
+
 tmp="$OUT.tmp"
-printf 'name\tbaseline_cert_sha256\tbaseline_apk_sha256\tbuilt_apk_sha256\n' > "$tmp"
+printf 'name\tpackage_name\tbaseline_cert_sha256\tbaseline_apk_sha256\tbuilt_apk_sha256\n' > "$tmp"
 total=0
 for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk ThemePicker.apk; do
     old="$ORIGINAL/$name"
@@ -47,6 +59,23 @@ for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk 
         rm -f "$tmp"
         exit 3
     fi
+    old_package=$(package_name "$old") ||
+        { echo "Cannot read package name: original $name" >&2; rm -f "$tmp"; exit 4; }
+    new_package=$(package_name "$new") ||
+        { echo "Cannot read package name: built $name" >&2; rm -f "$tmp"; exit 4; }
+    if [ "$old_package" != "$new_package" ]; then
+        echo "BLOCKED package identity mismatch: $name ($old_package vs $new_package)" >&2
+        rm -f "$tmp"
+        exit 5
+    fi
+    # These are platform-critical package names, not arbitrary signer domains.
+    case "$name:$old_package" in
+        SystemUI.apk:com.android.systemui|Settings.apk:com.android.settings) : ;;
+        SystemUI.apk:*|Settings.apk:*)
+            echo "BLOCKED unexpected platform package name: $name" >&2
+            rm -f "$tmp"
+            exit 5 ;;
+    esac
     orig_digest=$(digest "$old") || { echo "Signature verification failed: original $name" >&2; rm -f "$tmp"; exit 4; }
     new_digest=$(digest "$new") || { echo "Signature verification failed: built $name" >&2; rm -f "$tmp"; exit 4; }
     if [ "$orig_digest" != "$new_digest" ]; then
@@ -56,8 +85,8 @@ for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk 
     fi
     old_sha=$(sha256sum "$old" | sed 's/[[:space:]].*//')
     new_sha=$(sha256sum "$new" | sed 's/[[:space:]].*//')
-    printf '%s\t%s\t%s\t%s\n' "$name" "$orig_digest" "$old_sha" "$new_sha" >> "$tmp"
-    echo "OK: $name certificate matches"
+    printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$old_package" "$orig_digest" "$old_sha" "$new_sha" >> "$tmp"
+    echo "OK: $name signer and Android package identity match"
     total=$((total + 1))
 done
 if [ "$total" -eq 0 ]; then

@@ -10,6 +10,10 @@ PROPS="$STAGE/target.properties"
 TEMPLATE="$ROOT/ksu-hotfix"
 OUT="$ROOT/out"
 FINAL="$OUT/uwuAOSP hotfix v0.7.zip"
+# Never leave an old same-name ZIP behind after a newer validation failure:
+# users must not mistake a stale artifact for the just-checked build.
+mkdir -p "$OUT"
+rm -f "$FINAL"
 for bin in apksigner sha256sum zip mktemp sed cmp grep cp; do
     command -v "$bin" >/dev/null 2>&1 || { echo "Missing $bin" >&2; exit 2; }
 done

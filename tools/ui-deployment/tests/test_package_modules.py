@@ -38,6 +38,23 @@ class PackagerTests(unittest.TestCase):
             'case "$(head -c 5 "$apk")" in MULTI*) echo "Signer #2 certificate SHA-256 digest: $hex";; TENXX*) echo "Signer #10 certificate SHA-256 digest: $hex";; esac\n'
         )
         signer.chmod(0o755)
+        # Mock only the documented package-ID output, not an APK resource or
+        # signer. Real release builds must use Android SDK aapt2.
+        aapt2=self.bin/"aapt2"
+        aapt2.write_text(
+            '#!/bin/sh\n'
+            '[ "$1" = dump ] && [ "$2" = packagename ] || exit 2\n'
+            'apk="$3"\n'
+            'case "$(head -c 5 "$apk")" in OTHER*) echo "com.example.unrelated"; exit 0;; BADPK*) exit 3;; esac\n'
+            'case "${apk##*/}" in\n'
+            'SystemUI.apk) echo "com.android.systemui";;\n'
+            'Settings.apk) echo "com.android.settings";;\n'
+            'Launcher3QuickStep.apk) echo "com.android.launcher3";;\n'
+            'uwuSettingsExt.apk) echo "org.uwuaosp.settingsext";;\n'
+            'ThemePicker.apk) echo "com.android.wallpaper";;\n'
+            '*) exit 5;;\nesac\n'
+        )
+        aapt2.chmod(0o755)
         self.env=os.environ|{"PATH":str(self.bin)+":"+os.environ["PATH"]}
 
     def apk(self,name,bad=False,same=False):
@@ -75,6 +92,36 @@ class PackagerTests(unittest.TestCase):
         self.assertNotEqual(r.returncode,0)
         self.assertIn("signer mismatch",r.stderr.lower())
         self.no_zip()
+
+    def test_same_signer_but_wrong_android_package_is_blocked(self):
+        for name in COMPONENTS:
+            self.apk(name)
+        # Signing authority and file placement are not sufficient: package
+        # identity must match the installed original.
+        (self.tree/"staging/built/SystemUI.apk").write_bytes(b"OTHER-PACKAGE")
+        r=self.run_pack()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("package identity mismatch", r.stderr)
+        self.no_zip()
+
+    def test_bad_package_manifest_cannot_pass(self):
+        for name in COMPONENTS:
+            self.apk(name)
+        (self.tree/"staging/built/Settings.apk").write_bytes(b"BADPK-MANIFEST")
+        r=self.run_pack()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Cannot read package name", r.stderr)
+        self.no_zip()
+
+    def test_invalid_second_run_never_leaves_stale_release_zip(self):
+        for name in COMPONENTS:
+            self.apk(name)
+        out=self.tree/"out";out.mkdir()
+        stale=out/"uwuAOSP hotfix v0.7.zip"
+        stale.write_bytes(b"STALE-OLD-BUILD")
+        r=self.run_pack()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse(stale.exists())
 
     def test_same_first_signer_but_extra_second_signer_rejected(self):
         for name in COMPONENTS:
