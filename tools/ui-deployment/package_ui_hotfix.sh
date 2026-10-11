@@ -1,70 +1,79 @@
 #!/bin/sh
-# No-argument build-host packager. One independently rollbackable module per APK.
-# Never installs, mounts, signs or changes ROM partitions.
+# Single ZIP, one KernelSU module; all payloads use one on-device copy.
+# No arguments, no ROM flashing and no signing key access.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 STAGE="$ROOT/staging"
-TEMPLATE="$ROOT/ksu-hotfix"
 ORIGINAL="$STAGE/original"
 BUILT="$STAGE/built"
 PROPS="$STAGE/target.properties"
+TEMPLATE="$ROOT/ksu-hotfix"
 OUT="$ROOT/out"
-for bin in apksigner sha256sum zip mktemp sed; do
+FINAL="$OUT/uwu-ui-hotfix-oneplus6.zip"
+for bin in apksigner sha256sum zip mktemp sed cmp grep cp; do
     command -v "$bin" >/dev/null 2>&1 || { echo "Missing $bin" >&2; exit 2; }
 done
 [ -f "$PROPS" ] || { echo "Missing $PROPS" >&2; exit 2; }
-[ -f "$TEMPLATE/module.prop" ] && [ -f "$TEMPLATE/post-fs-data.sh" ] || exit 2
-for k in device sdk build_id; do
-    [ "$(grep -c "^$k=" "$PROPS" || :)" -eq 1 ] || { echo "Missing or duplicate $k" >&2; exit 2; }
+for name in module.prop post-fs-data.sh late-load.sh action.sh; do
+    [ -f "$TEMPLATE/$name" ] || { echo "Missing template $name" >&2; exit 2; }
+done
+for property in device sdk build_id; do
+    [ "$(grep -c "^$property=" "$PROPS" || :)" -eq 1 ] || {
+        echo "Invalid or missing $property" >&2; exit 3;
+    }
 done
 grep -qx 'device=OnePlus6' "$PROPS" || { echo 'Wrong device' >&2; exit 3; }
-grep -qx 'sdk=37' "$PROPS" || { echo 'Wrong Android API' >&2; exit 3; }
+grep -qx 'sdk=37' "$PROPS" || { echo 'Wrong API' >&2; exit 3; }
 grep -qx 'build_id=CP2A.260605.016' "$PROPS" || {
-    echo 'Unknown ROM baseline: revalidate before packaging' >&2; exit 3;
+    echo 'Unknown ROM baseline; revalidate after OTA' >&2; exit 3;
 }
-[ -d "$ORIGINAL" ] && [ -d "$BUILT" ] || {
-    echo "Missing original/built directories" >&2; exit 2;
-}
+[ -d "$ORIGINAL" ] && [ -d "$BUILT" ] || { echo 'Missing APK staging' >&2; exit 2; }
 for apk in "$BUILT"/*.apk; do
     [ -f "$apk" ] || continue
     case "${apk##*/}" in
         SystemUI.apk|Settings.apk|Launcher3QuickStep.apk|uwuSettingsExt.apk) : ;;
-        *) echo "Unrecognized APK: ${apk##*/}" >&2; exit 4 ;;
+        *) echo "Unexpected APK ${apk##*/}" >&2; exit 4 ;;
     esac
 done
-# apksigner is mandatory: the producer must supply matching platform-signed APKs.
+# A zero-diff APK should not take space on the phone; other APKs must
+# retain exactly the original platform signer. Never patch signatures.
 sh "$ROOT/verify_apk_signatures.sh"
 mkdir -p "$OUT"
-RELEASE=$(mktemp -d "$OUT/release.XXXXXXXX")
-TEMP=$(mktemp -d "$OUT/work.XXXXXXXX")
-trap 'rm -rf "$TEMP"' EXIT HUP INT TERM
-files=0
+WORK=$(mktemp -d "$OUT/package.XXXXXXXX")
+trap 'rm -rf "$WORK"' EXIT HUP INT TERM
+cp "$TEMPLATE/module.prop" "$TEMPLATE/post-fs-data.sh" \
+   "$TEMPLATE/late-load.sh" "$TEMPLATE/action.sh" "$WORK/"
+cp "$PROPS" "$WORK/target.properties"
+chmod 0755 "$WORK/post-fs-data.sh" "$WORK/late-load.sh" "$WORK/action.sh"
+: > "$WORK/base-apks.sha256"
+count=0
 for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk; do
     [ -f "$BUILT/$name" ] || continue
-    [ -f "$ORIGINAL/$name" ] || { echo "Missing baseline for $name" >&2; exit 5; }
+    [ -f "$ORIGINAL/$name" ] || { echo "Missing baseline: $name" >&2; exit 5; }
+    if cmp -s "$ORIGINAL/$name" "$BUILT/$name"; then
+        echo "UNCHANGED: $name (not included)"
+        continue
+    fi
     case "$name" in
-        SystemUI.apk) component=systemui; path=system_ext/priv-app/SystemUI/SystemUI.apk ;;
-        Settings.apk) component=settings; path=system_ext/priv-app/Settings/Settings.apk ;;
-        Launcher3QuickStep.apk) component=launcher; path=system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk ;;
-        uwuSettingsExt.apk) component=settingsext; path=system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk ;;
+        SystemUI.apk) component=systemui; dest=system_ext/priv-app/SystemUI/SystemUI.apk ;;
+        Settings.apk) component=settings; dest=system_ext/priv-app/Settings/Settings.apk ;;
+        Launcher3QuickStep.apk) component=launcher; dest=system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk ;;
+        uwuSettingsExt.apk) component=settingsext; dest=system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk ;;
     esac
-    # TMPFS copies full APKs into RAM: build one independent module per component.
-    rm -rf "$TEMP/stage"
-    mkdir -p "$TEMP/stage/system/$(dirname "$path")"
-    cp "$TEMPLATE/module.prop" "$TEMP/stage/module.prop"
-    cp "$TEMPLATE/post-fs-data.sh" "$TEMP/stage/post-fs-data.sh"
-    cp "$TEMPLATE/late-load.sh" "$TEMP/stage/late-load.sh"
-    cp "$PROPS" "$TEMP/stage/target.properties"
-    sed -i "s/^id=.*/id=uwu-ui-hotfix-$component/" "$TEMP/stage/module.prop"
-    sed -i "s/^name=.*/name=uwuAOSP Hotfix: $component/" "$TEMP/stage/module.prop"
-    hash=$(sha256sum "$ORIGINAL/$name" | sed 's/[[:space:]].*//')
-    printf '/system/%s|%s\n' "$path" "$hash" > "$TEMP/stage/base-apks.sha256"
-    cp "$BUILT/$name" "$TEMP/stage/system/$path"
-    chmod 0755 "$TEMP/stage/post-fs-data.sh" "$TEMP/stage/late-load.sh"
-    (cd "$TEMP/stage" && zip -q -r "$RELEASE/uwu-ui-hotfix-$component.zip" .)
-    files=$((files + 1))
-    echo "STAGED: $component"
+    mkdir -p "$WORK/system/$(dirname "$dest")"
+    cp "$BUILT/$name" "$WORK/system/$dest"
+    old_hash=$(sha256sum "$ORIGINAL/$name" | sed 's/[[:space:]].*//')
+    printf '/system/%s|%s\n' "$dest" "$old_hash" >> "$WORK/base-apks.sha256"
+    count=$((count + 1))
+    echo "INCLUDED: $component"
 done
-[ "$files" -gt 0 ] || { echo "No built APKs: no release produced" >&2; exit 6; }
-printf 'base_build=CP2A.260605.016\ncomponents=%s\n' "$files" > "$RELEASE/manifest.txt"
-echo "Created $RELEASE ($files independently protected modules; NOT installed)"
+[ "$count" -gt 0 ] || { echo 'No modified APK; no hotfix package generated' >&2; exit 6; }
+# One ZIP, no duplicate payload storage. Atomic replacement on host.
+TMPZIP="$OUT/.uwu-ui-hotfix-oneplus6.$$.zip"
+trap 'rm -rf "$WORK"; rm -f "$TMPZIP"' EXIT HUP INT TERM
+(cd "$WORK" && zip -q -9 -r "$TMPZIP" .)
+[ -s "$TMPZIP" ] || { echo 'Empty ZIP' >&2; exit 7; }
+mv -f "$TMPZIP" "$FINAL"
+echo "ONE INSTALL: $FINAL ($count modified APK components)"
+echo "Signed APKs are already compressed; mounted TMPFS RAM use is unchanged."
+echo "Not flashed. Verify Mountify and rollback plan before device testing."
