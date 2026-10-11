@@ -1,0 +1,113 @@
+name: OnePlus 6 HDR HWC Source QA
+
+on:
+  push:
+    branches: [fix/enchilada-hdr-legacy-render-intent]
+    paths:
+      - 'patches/enchilada/hdr/**'
+      - '.github/workflows/enchilada-hdr-source-qa.yml'
+  pull_request:
+    paths:
+      - 'patches/enchilada/hdr/**'
+      - '.github/workflows/enchilada-hdr-source-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reference-apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vendor-uwu
+      - uses: actions/checkout@v4
+        with:
+          repository: LineageOS/android_hardware_qcom_sm7250_display
+          ref: d3fae6913731a30c135a6cd1fab803913da06998
+          path: reference-hwc
+      - uses: actions/checkout@v4
+        with:
+          repository: uwuAOSP/platform_manifests
+          ref: uwu-17.0
+          path: official-uwu-manifest
+      - name: Verify official Android 17 display source provenance
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = ET.parse('official-uwu-manifest/snippets/lineage.xml').getroot()
+          hits = [p for p in root.findall('project')
+                  if p.get('path') == 'hardware/qcom/sm7250/display']
+          assert len(hits) == 1, hits
+          assert hits[0].get('name') == 'LineageOS/android_hardware_qcom_sm7250_display'
+          assert hits[0].get('remote') == 'lineageos'
+          assert 'name: "vendor.qti.hardware.display.composer-service"' in Path(
+              'reference-hwc/composer/Android.bp').read_text()
+          print('Official uwu-17.0 manifest -> Qualcomm sm7250 HWC source and build target OK')
+          PY
+      - name: Check guarded HWC build-tree preparer syntax
+        run: |
+          sh -n vendor-uwu/patches/enchilada/hdr/tools/prepare_op6_hdr_hwc_build.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('vendor-uwu/patches/enchilada/hdr/tools/prepare_op6_hdr_hwc_build.sh').read_text()
+          assert 'TARGET_PRODUCT' in s and '*enchilada*' in s
+          assert 'd3fae6913731a30c135a6cd1fab803913da06998' in s
+          assert 'git -C "$SRC" apply --check' in s
+          for bad in ('flash boot', 'flash dtbo', 'insmod ', 'setprop ', 'settings put '):
+              assert bad not in s, bad
+          PY
+      - name: Compile-check postbuild AArch64 ABI validator
+        run: |
+          python3 -m py_compile vendor-uwu/patches/enchilada/hdr/tools/verify_composer_abi.py
+          if python3 vendor-uwu/patches/enchilada/hdr/tools/verify_composer_abi.py /bin/ls /bin/ls \
+              >abi-guard-test.log 2>&1; then
+            echo "ABI validator failed to reject x86_64 binary" >&2
+            exit 1
+          fi
+          grep -q "expected ELF64 little-endian AArch64" abi-guard-test.log
+      - name: Verify patch applies to the reference source
+        run: |
+          cd reference-hwc
+          git apply --check "../vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch"
+          git apply "../vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch"
+          grep -q 'Legacy color mode' composer/hwc_display.cpp
+      - name: Compile and run the real patched Qualcomm mode parser
+        run: |
+          python3 vendor-uwu/patches/enchilada/hdr/test_real_populate_color_modes.py \
+            reference-hwc/composer/hwc_display.cpp
+      - name: Compile-test real HDR color mode predicate
+        run: |
+          python3 vendor-uwu/patches/enchilada/hdr/test_legacy_mode_mapping.py \
+            reference-hwc/composer/hwc_display.cpp
+      - name: Check narrow legacy compatibility conditions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch').read_text()
+          required = ('int_render_intent == -1', 'pic_quality == kStandard',
+                      'kBt2020', 'kSt2084', 'kHlg', 'RenderIntent::COLORIMETRIC')
+          for fragment in required:
+              assert fragment in text, fragment
+          banned = ('ro.surface_flinger.has_HDR_display=true', 'setprop ',
+                    'wm density ', 'qcom,mdss-dsi-bpp')
+          for fragment in banned:
+              assert fragment not in text, fragment
+          print('Source patch constraints OK (no binary compilation or device validation)')
+          PY
+      - name: Validate OnePlus 6 read-only HWC fingerprint probe
+        run: |
+          sh -n vendor-uwu/patches/enchilada/hdr/tools/op6_hwc_fingerprint.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('vendor-uwu/patches/enchilada/hdr/tools/op6_hwc_fingerprint.sh').read_text()
+          assert '#!/system/bin/sh' in source
+          assert 'vendor.qti.hardware.display.composer-service' in source
+          assert 'sha256sum' in source
+          for forbidden in ('setprop ', 'settings put ', 'wm density ', 'insmod ',
+                            'modprobe ', 'mount -o ', 'dd if=', 'reboot', 'fastboot flash'):
+              assert forbidden not in source, forbidden
+          print('Read-only script syntax and mutation guards passed')
+          PY
