@@ -6,6 +6,7 @@ STATUS="$MODDIR/last_guard_status.txt"
 BLOCK="$MODDIR/skip_mount"
 CONFIG="$MODDIR/target.properties"
 BASES="$MODDIR/base-apks.sha256"
+PAYLOADS="$MODDIR/payload-apks.sha256"
 
 write_state() { printf '%s\n' "$1" > "$STATUS" 2>/dev/null || :; }
 block() {
@@ -37,7 +38,7 @@ case "$mode" in
     *) block 'Mountify not in supported auto/manual mode' ;;
 esac
 
-[ -r "$CONFIG" ] && [ -s "$BASES" ] || block 'missing manifest'
+[ -r "$CONFIG" ] && [ -s "$BASES" ] && [ -s "$PAYLOADS" ] || block 'missing manifest'
 read_prop() { sed -n "s/^$1=//p" "$CONFIG" | head -n 1; }
 expected_device=$(read_prop device)
 expected_sdk=$(read_prop sdk)
@@ -48,6 +49,7 @@ expected_id=$(read_prop build_id)
 [ "$(getprop ro.build.id)" = "$expected_id" ] || block 'different ROM build ID'
 command -v sha256sum >/dev/null 2>&1 || block 'sha256sum unavailable'
 count=0
+seen='|'
 while IFS='|' read -r origin hash; do
     [ -n "$origin" ] || continue
     case "$origin" in
@@ -65,12 +67,34 @@ while IFS='|' read -r origin hash; do
     if [ -n "${UWU_GUARD_TEST_ROOT:-}" ]; then
         probe_path="$UWU_GUARD_TEST_ROOT$origin"
     fi
+    case "$seen" in *"|$origin|"*) block 'duplicate baseline APK target' ;; esac
+    seen="$seen$origin|"
+    # Do not allow a partially extracted or mismatched module to reach the
+    # metamodule handler. This check is only file existence; full mounted
+    # content hashes are verified by the one-shot post-boot service.
+    staged="$MODDIR$origin"
+    [ -r "$staged" ] || block 'staged signed APK missing'
     [ -r "$probe_path" ] || block 'baseline file missing'
     actual=$(sha256sum "$probe_path" 2>/dev/null | sed 's/[[:space:]].*//') || block 'hash read failed'
     [ "$actual" = "$hash" ] || block 'baseline APK hash mismatch (OTA or conflicting module)'
     count=$((count + 1))
 done < "$BASES"
-[ "$count" -gt 0 ] || block 'empty baseline list'
+[ "$count" -eq 5 ] || block 'incomplete five-component baseline manifest'
+# Five distinct allowlisted baselines imply all five component paths were
+# present. Require their payload manifest to be equally complete and unique,
+# without recomputing an additional five APK hashes at boot.
+payload_count=0
+payload_seen='|'
+while IFS='|' read -r origin hash; do
+    [ -n "$origin" ] || continue
+    case "$seen" in *"|$origin|"*) : ;; *) block 'payload target not in baseline' ;; esac
+    case "$payload_seen" in *"|$origin|"*) block 'duplicate payload APK target' ;; esac
+    payload_seen="$payload_seen$origin|"
+    case "$hash" in ''|*[!0-9a-f]*) block 'invalid payload digest' ;; esac
+    [ "${#hash}" -eq 64 ] || block 'invalid payload digest length'
+    payload_count=$((payload_count + 1))
+done < "$PAYLOADS"
+[ "$payload_count" -eq 5 ] || block 'incomplete five-component payload manifest'
 # Exact ROM101 theme color overlay belongs to a different signing domain
 # from SystemUI. ThemePicker updates are forbidden if the matching product
 # color RRO was changed by another module or OTA.
