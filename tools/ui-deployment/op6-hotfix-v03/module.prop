@@ -1,0 +1,6 @@
+id=uwu-ui-live-hotfix
+name=uwuAOSP hotfix v0.3
+version=0.3.0
+versionCode=30
+author=uwuAOSP adaptation
+description=OP6 Android 17: safe rollback of unverified UI toggles, one-shot guarded DPI 420, no SystemUI restart.
