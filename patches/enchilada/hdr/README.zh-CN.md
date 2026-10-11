@@ -37,3 +37,19 @@
 6. 最后单独补齐 HDR 亮度策略及显示设备配置；不能通过假写 HDR/SDR 比例绕过缺失的硬件能力。
 
 **目前 CI 只能证明补丁可应用于选定的参考源码，不能证明当前手机已经获得 HDR 输出。** 此 Draft PR 不会自动修改正在使用的 ROM 或 Boot。
+
+## 2026-10-11 原机 HAL 二进制与校准 XML 离线分析
+实际从手机只读提取 11 个原始文件（**原始厂商二进制及 4 MB QDCM 文件未上传到 GitHub**）。检测到：
+- Composer 是 AArch64、Android API 37 的 ELF，运行 HWC 2.4 / Qualcomm Composer 3.0，加载 `libsdmcore.so`、`libsdmutils.so`、`libgpu_tonemapper.so` 等 38 项动态依赖。
+- Composer 二进制中包含与参考实现一致的 `Invalid render intent`、`GetColorModeCount failed, use native color mode`、`color modes supported:` 等字符串；这支持源码族判断，但**不能根据字符串或 ELF Build ID 就声称源码提交完全一致**。
+- SOFEF00_M XML 解析成功，`Disp_Modes NumModes=11`，实际也有 11 个模式。
+- 校准 XML 明确包含 `hal_hdr`（DCI-P3 + HDR）与 `CTS`、`SRGB`、`DCI_P3`、`advance_*` 等；这些 XML `Mode` 节点都未显式提供 `RenderIntent` 属性。
+- 真机运行时 PQ/HLG 来自 SDM 枚举的 `bt2020_pq` / `bt2020_hlg` 条目，但它们不属于上述 11 个 XML Mode。反过来，`hal_hdr` 在本次运行时 HWC 可选模式列表中缺席，不能擅自补造。
+- 不修改 QDCM 大型二进制校准数据，不向 `hal_hdr`、`zhal_native`、`fod_native`、锐化或 `advance_*` 强行赋予标准色彩模式身份。
+- 针对补丁的 C++ 映射谓词测试已新增上述误识别负例，总计 20 个；它仍然**不等于原机 HWC 构建、VINTF 检测或 HDR 真机验证**。
+
+### 下一步：真正可刷版本的门槛
+1. 找到现有 uwuAOSP 101 Android 17 的**实际显示构建来源**，确认使用的 Soong 目标与此参考 `composer/hwc_display.cpp` 匹配，而不是按芯片相似性推断。
+2. 在配套 Android 17 编译环境中编译 Vendor Composer，比较 ELF 动态依赖、入口、服务 rc、SELinux 标签及原机运行接口。
+3. 先完成原机可回退机制验证，再考虑 KernelSU/Magisk systemless 挂载新 Vendor 用户空间服务；**无需 BOOT / DTBO / LKM**。
+4. 真机分别检查色彩映射表、普通 SDR 色准和 HWC HDR 输出模式；随后按原有亮度曲线实现有验证依据的 HDR/SDR 亮度控制。不能用伪造 HDR 元数据替代以上步骤。
