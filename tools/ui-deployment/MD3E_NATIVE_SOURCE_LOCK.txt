@@ -1,0 +1,47 @@
+uwuAOSP hotfix v0.6 — OnePlus 6 Android 17.0.101 native build lock
+ROM build ID=CP2A.260605.016
+device=OnePlus6
+Android API=37
+intended_density_dpi=420
+module_id=uwu-ui-live-hotfix
+backend=KernelSU + Mountify TMPFS/OverlayFS
+runtime_hooks=none
+merged_Source_20261011:
+frameworks/base=Zhanfg/platform_frameworks_base@ccaa206b36db45ed6add3eec3e2b4812f31b00c0 (PR 8)
+Settings=Zhanfg/platform_packages_apps_Settings@c3cfe7b63318bb17f6e8e542f4a7e33e1b38f94d (PR 4)
+Launcher3=Zhanfg/platform_packages_apps_Launcher3@601c7068193663506e154f1333f7dcc070f7fb49 (PR 4)
+uwuSettingsExt=Zhanfg/platform_packages_apps_uwuSettingsExt@289a20b44e68ce8b3836335b32793bbfd243213c (PR 3)
+
+SystemUI md3e/status:
+  compact top/header insets, dual-shade invocation, cutout safe tooltips
+  compact QS carrier/clock, gesture pill draw suppression (not gesture inset)
+  real com.android.systemui MomentArc nonblocking icon IPC / window cleanup
+  status clock second tick lifecycle with display/visibility gating
+Settings md3e/status:
+  homepage animation/layout without conflicting scroll offsets
+  original AOSP storage/memory pages (service gated)
+  HWC real HDR/refresh capability labels; do not fake physical VRR
+Launcher md3e/status:
+  All Apps popup handoff, nav transition motion, dynamic surfaces/tokens
+uwuSettingsExt md3e/status:
+  responsive header, gesture navigation mode sourced from active overlay
+
+Other device components to audit before claiming system-wide coverage:
+  uwuPrism + ThemePicker expressive resources and dynamic color
+  framework-res/uwu-sdk, SystemUI scenes / QS Compose, notification + lockscreen
+  OnePlus KeyHandler/Doze/PocketMode/LiveDisplay/Touch/Dirac hardware HALs
+  Android 17 accessibility contrast, RTL, 420dpi, large font, landscape
+  MD3E requirement: non-overlapping status/header/cutout; off Switch no bright border
+
+Build status:
+  These are *source integration candidates*. They are not APK binaries.
+  Static CI completed successfully in each fork; full AOSP 17 build and
+  actual platform signing, Mountify boot, 420DPI and gesture stress QA pending.
+  This lock file records intent only: does not attest that staged APKs
+  were compiled from these commits or authorize sideload on its own.
+
+Signing:
+  Each staged APK must match the installed original APK signer; private ROM
+  signer has not been established. Never bypass Android platform signature
+  verification or spoof the platform certificate. If absent, package script
+  must refuse to generate any flashable APK replacement ZIP.
