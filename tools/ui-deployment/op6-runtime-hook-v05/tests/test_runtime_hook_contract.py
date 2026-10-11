@@ -21,6 +21,27 @@ class RuntimeFixContract(unittest.TestCase):
         self.assertIn('param.setResult(null);', SRC)
         self.assertNotIn('setVisibility(View.GONE)', SRC)
         self.assertNotIn('wm density', SRC)
+    def test_draw_uses_observer_not_binder_on_every_frame(self):
+        self.assertIn('new ContentObserver(MAIN)', SRC)
+        self.assertIn('resolver.registerContentObserver(', SRC)
+        paint=SRC.split('private static void hookHandle(ClassLoader cl)', 1)[1].split(
+            'private static void hookClock(ClassLoader cl)',1)[0]
+        self.assertIn('if (HIDE_HANDLE) param.setResult(null)', paint)
+        self.assertNotIn('Settings.Secure.getInt(', paint)
+
+    def test_only_actual_installed_moment_entrypoints_hooked(self):
+        self.assertIn('MomentArcStartable$gestureReceiver$1', SRC)
+        self.assertIn('XposedBridge.hookAllMethods(receiver, "onReceive"', SRC)
+        self.assertIn('UPDATE_MOMENT_ARC_TOUCH', SRC)
+        self.assertNotIn('XposedBridge.hookAllMethods(arc, "onTouchCoordinates"', SRC)
+        self.assertIn('XposedBridge.hookAllMethods(arc, "createIconView"', SRC)
+        self.assertIn('XposedBridge.hookAllMethods(arc, "hide"', SRC)
+
+    def test_rom_ota_fail_closed(self):
+        self.assertIn('Build.VERSION.SDK_INT != 37', SRC)
+        self.assertIn('CP2A.260605.016', SRC)
+        self.assertIn('"OnePlus6".equalsIgnoreCase(Build.DEVICE)',SRC)
+
     def test_clock_null_guard(self):
         self.assertIn('mSecondsHandler', SRC)
         self.assertIn('"mSecondTick"', SRC)
