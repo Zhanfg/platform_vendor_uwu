@@ -1,9 +1,9 @@
 #!/system/bin/sh
-# Read-only KernelSU Action: one atomic, coherent four-component UI release.
+# Read-only KernelSU Action: one atomic, coherent five-component UI release.
 # Use the KernelSU Manager module enable/disable control to roll back ALL
 # components together. Never mix half-old SystemUI with half-new Settings.
 MODDIR=${0%/*}
-echo 'uwuAOSP hotfix v0.6 — native MD3E/SystemUI'
+echo 'uwuAOSP hotfix v0.7 — native MD3E/SystemUI'
 echo 'Mountify TMPFS / KernelSU; no LSPosed hooks.'
 echo
 [ -r "$MODDIR/module.prop" ] || { echo 'Module metadata missing'; exit 1; }
@@ -18,7 +18,7 @@ if [ -r "$MODDIR/last_runtime_status.txt" ]; then
   cat "$MODDIR/last_runtime_status.txt"
 fi
 echo
-for f in SystemUI Settings Launcher3QuickStep uwuSettingsExt; do
+for f in SystemUI Settings Launcher3QuickStep uwuSettingsExt ThemePicker; do
   case "$f" in
     Launcher3QuickStep) dest=Launcher3QuickStep/Launcher3QuickStep.apk ;;
     *) dest="$f/$f.apk" ;;
