@@ -53,7 +53,7 @@ or modifies an A/B slot.
    `ksu-hotfix/target.properties.example` to
    `staging/target.properties` after checking device properties.
 3. Run `sh tools/ui-deployment/package_ui_hotfix.sh` on a Linux build host,
-   with no arguments. Output: `tools/ui-deployment/out/uwu-ui-hotfix.zip`.
+   with no arguments. Output: `tools/ui-deployment/out/uwu-ui-hotfix-oneplus6.zip`.
    It will fail if no APK pair, invalid platform signature, unexpected build,
    or missing build dependencies are found.
 4. Inspect ZIP contents and test only after checking the currently installed
@@ -97,7 +97,7 @@ The OTA guard now permits mounting only when all these checks succeed:
   mode; the legacy post-fs-data fallback has different `skip_mount` semantics).
 - Mountify is enabled, its persisted `config.sh` is present and either
   `mountify_mounts=2` (automatic) or `mountify_mounts=1` **and** the
-  component-specific hotfix ID is in `modules.txt`.
+  single hotfix ID `uwu-ui-hotfix` is in `modules.txt`.
 - The active original ROM APK hash, device/API and build ID match the manifest.
 - The module does not already have `skip_mount` from a previous pause.
 
@@ -105,24 +105,51 @@ If any item fails, the guard writes `skip_mount` and **never mounts** the
 old APK. The pause persists until the user explicitly replaces/revalidates
 the module. It does not touch the A/B slot, recovery, AVB, or signing checks.
 
-### TMPFS memory / package layout
+### Single-ZIP module, optimized for Mountify TMPFS
 
-Do **not** combine the full SystemUI, Settings and Launcher APKs in one
-giant module: Mountify copies module files into a TMPFS-backed staging
-area, so larger APKs increase RAM pressure at boot. The build host now emits
-separate `uwu-ui-hotfix-systemui.zip`, `-settings.zip`,
-`-launcher.zip`, and `-settingsext.zip` (only for staged APKs),
-each containing exactly one signed replacement and one exact original hash.
+**One installation, one KernelSU module (`id=uwu-ui-hotfix`).** The
+host-side no-argument packager creates exactly one compressed file:
+`out/uwu-ui-hotfix-oneplus6.zip`. Within it, there is one
+`system/system_ext/priv-app/<Component>/<Component>.apk` for each
+**modified** and successfully verified APK. Files byte-identical to
+the installed ROM are omitted entirely. No backup APK or second copy of
+the original ROM is included in the module.
 
-The package layout is the normal Magisk/KernelSU systemless hierarchy:
-`system/system_ext/priv-app/<Component>/<Component>.apk`.
-Mountify's own copier handles `system_ext`, with read-only OverlayFS
-mapping. **Do not** place the APK straight into `/system` on the device,
-do not enable Mountify expert mode, and do not disable bootloop protection.
+Use KernelSU manager's **Action** script (or run the installed
+`action.sh` via a root shell, without arguments) to display four
+components and toggle one at a time. The toggle uses a same-filesystem
+rename between `system/...` and `inactive/system/...`; only the
+active `system/` subtree is copied into Mountify TMPFS. This operation
+changes **next boot** only and never edits the ROM partition. It does not
+clear the global `skip_mount` OTA-compatibility lock. On an upstream
+OTA mismatch the whole single module is conservatively paused until a
+revalidated update is installed.
 
-Mountify lists `mountify_stop_start=0` by default. Keep that default:
-a full Android restart to work around hot loading is not necessary for
-the guard, and changing it can cause visible SystemUI interruption.
+**RAM and storage tradeoffs**:
+- On-phone installation uses one expanded copy of each included APK in
+  `/data/adb/modules/uwu-ui-hotfix/system`, plus Mountify's separate
+  TMPFS-backed copy while mounted. A combined ZIP alone **does not**
+  reduce the sum of the active APK bytes in TMPFS.
+- Only enabled components belong in the active `system/` tree; disabled
+  APKs are parked under `inactive/`, which Mountify does not copy.
+- The download ZIP is compressed with ZIP deflate level 9; most APKs
+  themselves already contain compressed content, so ZIP savings may be
+  marginal. Delete the download archive only after installation and
+  validation, if you do not need an offline recovery copy.
+- This design avoids including unchanged APKs, duplicate runtime
+  payloads and multiple KSU-module metadata copies. Expect substantial
+  TMPFS usage if the full SystemUI and Settings APKs must be replaced.
+- Prefer narrowly scoped **RRO overlay APKs** for color and eligible
+  dimension resources, after validating the Android overlayable policy.
+  Java/Kotlin/Compose code cannot generally be replaced by RRO alone.
+- Do not use boot-time binary patch reconstruction merely to reduce
+  `/data` storage: it adds CPU/IO, temporary workspace and extra
+  failure modes at the most sensitive stage of boot.
+
+Mountify's copier maps `system_ext` using the regular systemless
+hierarchy. Do not write files directly into `/system`, enable
+Mountify expert mode or disable its bootloop protection. Preserve its
+default `mountify_stop_start=0` unless justified by device QA.
 
 ### Caveat: hot update is a release channel, not zero-downtime replacement
 
