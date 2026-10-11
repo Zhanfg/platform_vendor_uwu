@@ -1,0 +1,34 @@
+name: LOS Identity Compatibility Audit
+on:
+  push:
+    branches: ["audit/**"]
+    paths:
+      - "build/target/product/source.properties"
+      - "config/framework_compatibility_matrix.xml"
+      - "config/permissions/privapp-permissions-lineagehw.xml"
+      - "tools/los-compat/**"
+      - ".github/workflows/los-identity-compat-qa.yml"
+  pull_request:
+    paths:
+      - "build/target/product/source.properties"
+      - "config/framework_compatibility_matrix.xml"
+      - "config/permissions/privapp-permissions-lineagehw.xml"
+      - "tools/los-compat/**"
+      - ".github/workflows/los-identity-compat-qa.yml"
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            build/target/product/source.properties
+            config/framework_compatibility_matrix.xml
+            config/permissions/privapp-permissions-lineagehw.xml
+            tools/los-compat
+          sparse-checkout-cone-mode: false
+      - run: python3 -m unittest discover -s tools/los-compat -p 'test_identity_contract.py' -v
