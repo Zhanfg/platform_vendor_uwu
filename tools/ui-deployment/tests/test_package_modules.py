@@ -1,4 +1,4 @@
-"""Host-side test for independently staged Mountify modules.
+"""Host-side test for a single Mountify ZIP with multiple components.
 
 Uses a fake apksigner solely to test control flow; it DOES NOT validate real APKs.
 """
@@ -23,7 +23,7 @@ class PackagerTests(unittest.TestCase):
         (self.tree / "ksu-hotfix").mkdir()
         for filename in ("package_ui_hotfix.sh", "verify_apk_signatures.sh"):
             shutil.copy(ROOT / filename, self.tree / filename)
-        for filename in ("module.prop", "post-fs-data.sh", "late-load.sh"):
+        for filename in ("module.prop", "post-fs-data.sh", "late-load.sh", "action.sh"):
             shutil.copy(ROOT / "ksu-hotfix" / filename, self.tree / "ksu-hotfix" / filename)
         (self.tree / "staging/target.properties").write_text(
             "device=OnePlus6\nsdk=37\nbuild_id=CP2A.260605.016\n"
@@ -55,23 +55,40 @@ class PackagerTests(unittest.TestCase):
             env=self.env, text=True, capture_output=True
         )
 
-    def test_two_components_are_independent_zip_modules(self):
+    def test_two_components_are_in_one_zip_without_duplicate_payloads(self):
         self.apk("SystemUI.apk")
         self.apk("Settings.apk")
         result = self.run_pack()
         self.assertEqual(result.returncode, 0, result.stderr)
-        releases = list((self.tree / "out").glob("release.*"))
-        self.assertEqual(len(releases), 1)
-        files = sorted(p.name for p in releases[0].glob("*.zip"))
-        self.assertEqual(files, [
-            "uwu-ui-hotfix-settings.zip", "uwu-ui-hotfix-systemui.zip",
-        ])
-        for comp, name in (("settings", "Settings.apk"), ("systemui", "SystemUI.apk")):
-            with ZipFile(releases[0] / f"uwu-ui-hotfix-{comp}.zip") as z:
-                self.assertIn(f"id=uwu-ui-hotfix-{comp}", z.read("module.prop").decode())
-                self.assertIn(name, " ".join(z.namelist()))
-                self.assertEqual(len(z.read("base-apks.sha256").splitlines()), 1)
-                self.assertIn("late-load.sh", z.namelist())
+        files = list((self.tree / "out").glob("*.zip"))
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].name, "uwu-ui-hotfix-oneplus6.zip")
+        with ZipFile(files[0]) as z:
+            names = z.namelist()
+            self.assertIn("id=uwu-ui-hotfix\n", z.read("module.prop").decode())
+            for comp in ("SystemUI", "Settings"):
+                self.assertEqual(sum(n.endswith(f"/{comp}.apk") for n in names), 1)
+            self.assertEqual(len(z.read("base-apks.sha256").splitlines()), 2)
+            self.assertIn("action.sh", names)
+            self.assertIn("late-load.sh", names)
+            self.assertFalse(any(n.startswith("payload/") for n in names))
+
+    def test_unchanged_apk_is_not_packaged(self):
+        self.apk("SystemUI.apk")
+        self.apk("Settings.apk")
+        (self.tree / "staging/built/Settings.apk").write_bytes(b"BASELINE-APKS")
+        result = self.run_pack()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with ZipFile(self.tree / "out/uwu-ui-hotfix-oneplus6.zip") as z:
+            self.assertFalse(any(n.endswith("/Settings.apk") for n in z.namelist()))
+            self.assertEqual(len(z.read("base-apks.sha256").splitlines()), 1)
+
+    def test_all_unchanged_fails_closed(self):
+        self.apk("Settings.apk")
+        (self.tree / "staging/built/Settings.apk").write_bytes(b"BASELINE-APKS")
+        result = self.run_pack()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.tree / "out/uwu-ui-hotfix-oneplus6.zip").exists())
 
     def test_signature_mismatch_blocks_package(self):
         self.apk("Settings.apk", bad_signer=True)
