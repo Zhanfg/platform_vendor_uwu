@@ -51,6 +51,13 @@ int main() {
         {"bt2020_hlg", "bt2020", "", "standard", "st2084", -1, false},
         {"FAKE", "srgb", "sdr", "standard", "", -1, false},
         {"CTS", "dcip3", "sdr", "standard", "", -1, false},
+        // Real QDCM profiles that must NOT become Android standard modes.
+        {"hal_hdr", "dcip3", "hdr", "standard", "", -1, false},
+        {"zhal_native", "srgb", "sdr", "standard", "", -1, false},
+        {"fod_native", "srgb", "sdr", "standard", "", -1, false},
+        {"sharpness-70", "srgb", "sdr", "standard", "", -1, false},
+        {"sharpness0", "srgb", "sdr", "standard", "", -1, false},
+        {"bt2020_pq", "bt2020", "", "enhanced", "st2084", -1, false},
     };
     for (const auto& test : cases) {
         const string& mode_string = test.name;
@@ -67,7 +74,7 @@ int main() {
             return 1;
         }
     }
-    std::cout << "14 exact color-mode mappings passed" << std::endl;
+    std::cout << "20 exact color-mode mappings passed" << std::endl;
     return 0;
 }
 """
