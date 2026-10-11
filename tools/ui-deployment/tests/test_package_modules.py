@@ -7,7 +7,7 @@ from pathlib import Path
 import os, shutil, subprocess, tempfile, unittest
 
 ROOT=Path(__file__).resolve().parents[1]
-COMPONENTS=("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk")
+COMPONENTS=("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk","ThemePicker.apk")
 
 class PackagerTests(unittest.TestCase):
     def setUp(self):
@@ -52,7 +52,7 @@ class PackagerTests(unittest.TestCase):
     def no_zip(self):
         self.assertEqual(list((self.tree/"out").rglob("*.zip")),[])
 
-    def test_four_mock_signed_components_still_fail_exact_apk_hash(self):
+    def test_five_mock_signed_components_still_fail_exact_apk_hash(self):
         for name in COMPONENTS:
             self.apk(name)
         r=self.run_pack()
