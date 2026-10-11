@@ -83,3 +83,57 @@ UI changes for the new OTA. Never blindly remount a previous ROM's SystemUI.
   despite Android 17, so compatibility is based on build ID + exact base APK
   hashes, not fingerprint alone.
 
+
+## Mountify TMPFS compatibility: OnePlus 6
+
+User-confirmed backend: **Mountify, TMPFS**. In Mountify this means TMPFS
+supplies the upper module content and OverlayFS exposes it under ROM paths.
+It **does not** mean copying directly to the A/B system partition.
+Mountify source of truth:
+`backslashxx/mountify/module/post-fs-data.sh` (`mountify_copy`) and README.
+
+The OTA guard now permits mounting only when all these checks succeed:
+- `/data/adb/modules/mountify/metamount.sh` exists (actual KernelSU metamodule
+  mode; the legacy post-fs-data fallback has different `skip_mount` semantics).
+- Mountify is enabled, its persisted `config.sh` is present and either
+  `mountify_mounts=2` (automatic) or `mountify_mounts=1` **and** the
+  component-specific hotfix ID is in `modules.txt`.
+- The active original ROM APK hash, device/API and build ID match the manifest.
+- The module does not already have `skip_mount` from a previous pause.
+
+If any item fails, the guard writes `skip_mount` and **never mounts** the
+old APK. The pause persists until the user explicitly replaces/revalidates
+the module. It does not touch the A/B slot, recovery, AVB, or signing checks.
+
+### TMPFS memory / package layout
+
+Do **not** combine the full SystemUI, Settings and Launcher APKs in one
+giant module: Mountify copies module files into a TMPFS-backed staging
+area, so larger APKs increase RAM pressure at boot. The build host now emits
+separate `uwu-ui-hotfix-systemui.zip`, `-settings.zip`,
+`-launcher.zip`, and `-settingsext.zip` (only for staged APKs),
+each containing exactly one signed replacement and one exact original hash.
+
+The package layout is the normal Magisk/KernelSU systemless hierarchy:
+`system/system_ext/priv-app/<Component>/<Component>.apk`.
+Mountify's own copier handles `system_ext`, with read-only OverlayFS
+mapping. **Do not** place the APK straight into `/system` on the device,
+do not enable Mountify expert mode, and do not disable bootloop protection.
+
+Mountify lists `mountify_stop_start=0` by default. Keep that default:
+a full Android restart to work around hot loading is not necessary for
+the guard, and changing it can cause visible SystemUI interruption.
+
+### Caveat: hot update is a release channel, not zero-downtime replacement
+
+Our regular-module ZIP is independently updatable from ROM OTAs; however,
+code-bearing privileged APKs generally require reboot to be loaded safely.
+Only eligible RRO resource changes may be switched live, after idmap and
+overlayable permission checks. Mountify's `MODULE_HOT_INSTALL_REQUEST`
+updates module files; it is **not** proof that an already-running SystemUI
+process has loaded a new APK.
+
+KernelSU-Next's late-load mode runs `late-load.sh` instead of
+`post-fs-data.sh`. The module contains both scripts; each performs the
+same compatibility check before Mountify's overlay mount in that mode.
+
