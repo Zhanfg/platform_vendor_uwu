@@ -1,0 +1,40 @@
+name: ROM Identity Source / Product Image Audit
+
+on:
+  push:
+    branches: ["audit/**"]
+    paths:
+      - "build/target/product/source.properties"
+      - "config/permissions/privapp-permissions-lineagehw.xml"
+      - "config/framework_compatibility_matrix.xml"
+      - "config/common.mk"
+      - "overlay/common/frameworks/base/packages/SystemUI/res/values/config.xml"
+      - "tools/identity/**"
+      - ".github/workflows/rom-identity-audit-qa.yml"
+  pull_request:
+    paths:
+      - "build/target/product/source.properties"
+      - "tools/identity/**"
+      - ".github/workflows/rom-identity-audit-qa.yml"
+permissions:
+  contents: read
+jobs:
+  source-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            build/target/product/source.properties
+            config/permissions/privapp-permissions-lineagehw.xml
+            config/framework_compatibility_matrix.xml
+            config/common.mk
+            overlay/common/frameworks/base/packages/SystemUI/res/values/config.xml
+            tools/identity
+          sparse-checkout-cone-mode: false
+      - name: Source integrity and mock built image audit
+        run: python3 -m unittest discover -s tools/identity -p test_identity_surface.py -v
+      - name: Print source identity audit
+        run: python3 tools/identity/audit_identity_surface.py
