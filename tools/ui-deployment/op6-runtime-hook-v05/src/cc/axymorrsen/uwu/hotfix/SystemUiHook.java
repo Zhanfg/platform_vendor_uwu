@@ -1,6 +1,8 @@
 package cc.axymorrsen.uwu.hotfix;
 
 import android.content.Context;
+import android.content.ContentResolver;
+import android.database.ContentObserver;
 import android.graphics.Canvas;
 import android.graphics.Outline;
 import android.graphics.drawable.Drawable;
@@ -47,6 +49,10 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
     private static final Map<Object, Cache> ENABLED =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static final ThreadLocal<Boolean> IN_TOUCH = new ThreadLocal<>();
+    private static final Map<View, Boolean> HANDLE_VIEWS =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private static volatile boolean HIDE_HANDLE;
+    private static volatile boolean HANDLE_OBSERVER_STARTED;
     private static final Map<Class<?>, Boolean> TICK_HOOKS =
             Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -70,6 +76,43 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
         catch (Throwable t) { log("MomentArc hook unavailable", t); }
     }
 
+    // Read SettingsProvider only on initialization or setting changes.
+    // Doing a Binder read on every navigation handle onDraw() would
+    // introduce jank/ANR risk into the exact path this module must fix.
+    private static void trackHandle(View view) {
+        HANDLE_VIEWS.put(view, true);
+        if (HANDLE_OBSERVER_STARTED) return;
+        synchronized (HANDLE_VIEWS) {
+            if (HANDLE_OBSERVER_STARTED) return;
+            HANDLE_OBSERVER_STARTED = true;
+            try {
+                final ContentResolver resolver = view.getContext().getContentResolver();
+                final ContentObserver watcher = new ContentObserver(MAIN) {
+                    @Override public void onChange(boolean selfChange) {
+                        try {
+                            HIDE_HANDLE = Settings.Secure.getInt(
+                                    resolver, "uwu_hide_gesture_handle", 0) == 1;
+                            synchronized (HANDLE_VIEWS) {
+                                for (View tracked : HANDLE_VIEWS.keySet()) {
+                                    if (tracked != null) tracked.postInvalidate();
+                                }
+                            }
+                        } catch (RuntimeException error) {
+                            HIDE_HANDLE = false;
+                            log("Cannot refresh gesture-handle setting", error);
+                        }
+                    }
+                };
+                watcher.onChange(false);
+                resolver.registerContentObserver(Settings.Secure.getUriFor(
+                        "uwu_hide_gesture_handle"), false, watcher);
+            } catch (Throwable e) {
+                HIDE_HANDLE = false; // fail open to the stock renderer
+                log("Could not observe gesture handle preference", e);
+            }
+        }
+    }
+
     private static void hookHandle(ClassLoader cl) {
         String base = "com.android.systemui.navigationbar.gestural.";
         for (String name : new String[] {"NavigationHandle", "QuickswitchOrientedNavHandle"}) {
@@ -79,17 +122,14 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
                     try {
                         View v = (View) param.thisObject;
-                        // User 0 is the only supported system-user target of the
-                        // existing v0.x KernelSU module. No nav-size mutation.
-                        if (Settings.Secure.getInt(
-                                v.getContext().getContentResolver(),
-                                "uwu_hide_gesture_handle", 1) == 1) {
-                            param.setResult(null);
-                        }
+                        trackHandle(v);
+                        // Only paint is skipped; nav view, gesture touch insets and
+                        // accessibility stay unchanged.
+                        if (HIDE_HANDLE) param.setResult(null);
                     } catch (Throwable t) {
                         // Fail open: a broken settings service must never crash
                         // SystemUI while rendering the navigation bar.
-                        log("Cannot query gesture-paint preference", t);
+                        log("Gesture-handle drawing hook failed", t);
                     }
                 }
             });
