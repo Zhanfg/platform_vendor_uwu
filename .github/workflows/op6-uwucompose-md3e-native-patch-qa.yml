@@ -1,0 +1,36 @@
+name: OP6 uwuCompose MD3E upstream patch QA
+on:
+  push:
+    branches: ["integration/op6-md3e-ksu-native-v06"]
+    paths:
+      - "tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch"
+      - ".github/workflows/op6-uwucompose-md3e-native-patch-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch"
+      - ".github/workflows/op6-uwucompose-md3e-native-patch-qa.yml"
+permissions:
+  contents: read
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: uwuAOSP/platform_uwu-sdk
+          ref: 75c696d97527dfbf5fd89471ae6ea1a13aeee4fd
+          path: upstream-uwusdk
+      - name: Check patch on exact ROM 17.0.101 source
+        run: |
+          cd upstream-uwusdk
+          git apply --check ../tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch
+          git apply ../tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch
+          grep -q 'stringResource(R.string.uwu_settings_navigate_up)' uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsToolbar.kt
+          test -s uwuCompose/res/values-zh-rCN/strings.xml

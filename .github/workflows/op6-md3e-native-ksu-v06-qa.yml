@@ -1,0 +1,34 @@
+name: OP6 MD3E native KSU staging QA
+on:
+  push:
+    branches: ["integration/op6-md3e-ksu-native-v06"]
+    paths:
+      - "tools/ui-deployment/**"
+      - ".github/workflows/op6-md3e-native-ksu-v06-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/**"
+      - ".github/workflows/op6-md3e-native-ksu-v06-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment
+          sparse-checkout-cone-mode: true
+      - name: Native module contract and POSIX syntax
+        run: |
+          python3 -m unittest discover -s tools/ui-deployment/tests \
+            -p 'test_native_ksu_md3e.py' -v
+      - name: Verify no release created without properly signed APKs
+        run: |
+          test ! -f "tools/ui-deployment/out/uwuAOSP hotfix v0.6.zip"
+          echo "Expected: release blocked until all four genuinely compiled APKs pass exact signatures."

@@ -1,0 +1,6 @@
+id=uwu-ui-live-hotfix
+name=uwuAOSP hotfix v0.6
+version=0.6.0-dev
+versionCode=60
+author=uwuAOSP UI Engineering
+description=Single native KSU+Mountify TMPFS UI overlay for OP6 A17; signed APK gates, MD3E/gesture/SystemUI.
