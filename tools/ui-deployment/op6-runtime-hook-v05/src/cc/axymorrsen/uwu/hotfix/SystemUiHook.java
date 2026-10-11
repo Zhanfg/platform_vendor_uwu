@@ -6,6 +6,7 @@ import android.database.ContentObserver;
 import android.graphics.Canvas;
 import android.graphics.Outline;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -68,6 +69,16 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
 
     @Override public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
         if (!"com.android.systemui".equals(p.packageName)) return;
+        // Never install hooks on an unverified ROM OTA or another device.
+        // DEX class/method compatibility was checked against the installed
+        // OnePlus 6 API 37 / CP2A.260605.016 SystemUI.apk baseline.
+        if (Build.VERSION.SDK_INT != 37
+                || !"CP2A.260605.016".equals(Build.ID)
+                || !("OnePlus6".equalsIgnoreCase(Build.DEVICE)
+                        || "enchilada".equalsIgnoreCase(Build.DEVICE))) {
+            XposedBridge.log(TAG + ": unknown ROM baseline; hooks not installed");
+            return;
+        }
         try { hookHandle(p.classLoader); }
         catch (Throwable t) { log("Gesture-handle hook unavailable", t); }
         try { hookClock(p.classLoader); }
