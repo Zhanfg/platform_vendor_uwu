@@ -81,9 +81,9 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
                         View v = (View) param.thisObject;
                         // User 0 is the only supported system-user target of the
                         // existing v0.x KernelSU module. No nav-size mutation.
-                        if (Settings.Secure.getIntForUser(
+                        if (Settings.Secure.getInt(
                                 v.getContext().getContentResolver(),
-                                "uwu_hide_gesture_handle", 1, 0) == 1) {
+                                "uwu_hide_gesture_handle", 1) == 1) {
                             param.setResult(null);
                         }
                     } catch (Throwable t) {
