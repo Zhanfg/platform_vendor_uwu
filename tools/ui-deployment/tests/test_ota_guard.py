@@ -18,6 +18,13 @@ class BootGuardTests(unittest.TestCase):
         self.mod = self.root / "module"
         self.mod.mkdir()
         shutil.copyfile(SOURCE, self.mod / "post-fs-data.sh")
+        (self.mod / "module.prop").write_text("id=uwu-ui-hotfix-settings\\n")
+        mountify = self.root / "rom/data/adb/modules/mountify"
+        mountify.mkdir(parents=True)
+        (mountify / "metamount.sh").write_text("#!/system/bin/sh\\n")
+        config = self.root / "rom/data/adb/mountify"
+        config.mkdir(parents=True)
+        (config / "config.sh").write_text("mountify_mounts=2\\n")
         (self.mod / "target.properties").write_text(
             "device=OnePlus6\nsdk=37\nbuild_id=CP2A.260605.016\n"
         )
@@ -71,6 +78,27 @@ class BootGuardTests(unittest.TestCase):
         self.apk.write_bytes(b"known-good-original-apk")
         self.assertIn("COMPATIBLE BUT PAUSED", self.run_guard())
         self.assertTrue((self.mod / "skip_mount").exists())
+
+    def test_without_metamodule_handler_blocks(self):
+        (self.root / "rom/data/adb/modules/mountify/metamount.sh").unlink()
+        self.assertIn("Mountify metamodule handler not found", self.run_guard())
+        self.assertTrue((self.mod / "skip_mount").exists())
+
+    def test_manual_mode_without_our_module_blocks(self):
+        config = self.root / "rom/data/adb/mountify"
+        (config / "config.sh").write_text("mountify_mounts=1\\n")
+        (config / "modules.txt").write_text("some-other-module\\n")
+        self.assertIn("Mountify manual list excludes this module", self.run_guard())
+
+    def test_manual_mode_with_module_id_allows(self):
+        config = self.root / "rom/data/adb/mountify"
+        (config / "config.sh").write_text("mountify_mounts=1\\n")
+        (config / "modules.txt").write_text("uwu-ui-hotfix-settings\\n")
+        self.assertTrue(self.run_guard().startswith("COMPATIBLE:"))
+
+    def test_mountify_disabled_blocks(self):
+        (self.root / "rom/data/adb/modules/mountify/disable").touch()
+        self.assertIn("Mountify disabled", self.run_guard())
 
     def test_unknown_target_blocks(self):
         (self.mod / "base-apks.sha256").write_text("/system/etc/passwd|abc\n")
