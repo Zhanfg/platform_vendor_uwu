@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<overlay xmlns:android="http://schemas.android.com/apk/res/android">
+    <item target="dimen/navigation_handle_radius"
+          value="@dimen/navigation_handle_radius" />
+    <item target="dimen/navigation_home_handle_additional_height_for_animation"
+          value="@dimen/navigation_home_handle_additional_height_for_animation" />
+</overlay>
