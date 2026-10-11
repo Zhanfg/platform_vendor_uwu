@@ -152,6 +152,51 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
                 "com.android.systemui.moment.arc.MomentArcController", cl);
         if (arc == null) return;
 
+        // Installed 17.0.101 APK has no declared Controller.onTouchCoordinates:
+        // R8 inlined that source method into the gesture BroadcastReceiver.
+        // Scope caching and failure containment to the actual DEX entrypoint.
+        final Class<?> receiver = XposedHelpers.findClassIfExists(
+                "com.android.systemui.moment.arc.MomentArcStartable$gestureReceiver$1", cl);
+        if (receiver != null) {
+            XposedBridge.hookAllMethods(receiver, "onReceive", new XC_MethodHook() {
+                private final ThreadLocal<Boolean> scopedTouch = new ThreadLocal<>();
+                @Override protected void beforeHookedMethod(MethodHookParam p) {
+                    android.content.Intent intent = p.args.length > 1
+                            && p.args[1] instanceof android.content.Intent
+                            ? (android.content.Intent) p.args[1] : null;
+                    boolean update = intent != null
+                            && "com.android.systemui.action.UPDATE_MOMENT_ARC_TOUCH"
+                                    .equals(intent.getAction());
+                    scopedTouch.set(update);
+                    if (update) IN_TOUCH.set(true);
+                }
+                @Override protected void afterHookedMethod(MethodHookParam p) {
+                    boolean update = Boolean.TRUE.equals(scopedTouch.get());
+                    scopedTouch.remove();
+                    if (update) IN_TOUCH.remove();
+                    if (!p.hasThrowable()
+                            || !(p.getThrowable() instanceof RuntimeException)) return;
+                    android.content.Intent intent = p.args.length > 1
+                            && p.args[1] instanceof android.content.Intent
+                            ? (android.content.Intent) p.args[1] : null;
+                    String action = intent == null ? null : intent.getAction();
+                    if (action == null || !action.startsWith("com.android.systemui.action.")
+                            || !action.endsWith("_MOMENT_ARC")
+                            && !action.endsWith("_MOMENT_ARC_TOUCH")) return;
+                    log("MomentArc broadcast failure contained", p.getThrowable());
+                    p.setResult(null);
+                    MAIN.post(() -> {
+                        try {
+                            Object startable = XposedHelpers.getObjectField(
+                                    p.thisObject, "this$0");
+                            if (startable != null) safeHide(
+                                    XposedHelpers.getObjectField(startable, "controller"));
+                        } catch (Throwable e) { log("MomentArc safe hide unavailable", e); }
+                    });
+                }
+            });
+        }
+
         XposedBridge.hookAllMethods(arc, "hide", new XC_MethodHook() {
             private final ThreadLocal<Object> beforeView = new ThreadLocal<>();
             @Override protected void beforeHookedMethod(MethodHookParam p) {
@@ -180,21 +225,6 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
 
         // Only cache during high-frequency coordinate broadcasts. Normal
         // SHOW calls and ContentObserver callbacks retain immediate reads.
-        XposedBridge.hookAllMethods(arc, "onTouchCoordinates", new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) {
-                IN_TOUCH.set(true);
-            }
-            @Override protected void afterHookedMethod(MethodHookParam p) {
-                IN_TOUCH.remove();
-                if (p.hasThrowable() && p.getThrowable() instanceof RuntimeException) {
-                    Throwable error = p.getThrowable();
-                    log("MomentArc touch callback failed; contained", error);
-                    p.setResult(null);
-                    final Object owner = p.thisObject;
-                    MAIN.post(() -> safeHide(owner));
-                }
-            }
-        });
         XposedBridge.hookAllMethods(arc, "isMomentArcEnabled", new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (!Boolean.TRUE.equals(IN_TOUCH.get())) return;
