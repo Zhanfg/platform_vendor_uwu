@@ -33,6 +33,10 @@ jobs:
           git apply --check "../vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch"
           git apply "../vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch"
           grep -q 'Legacy color mode' composer/hwc_display.cpp
+      - name: Compile-test real HDR color mode predicate
+        run: |
+          python3 vendor-uwu/patches/enchilada/hdr/test_legacy_mode_mapping.py \
+            reference-hwc/composer/hwc_display.cpp
       - name: Check narrow legacy compatibility conditions
         run: |
           python3 - <<'PY'
