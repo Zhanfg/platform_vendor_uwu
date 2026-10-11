@@ -15,6 +15,10 @@
 - `vendor/uwu/build/target/product/source.properties` 将 SDK 镜像 `SystemImage.TagId` 写为 `lineage`，本 PR 修改为 `uwu`。**这不是 ROM 的 `ro.build.fingerprint`，不应夸大为修复应用识别。**
 - `vendor/uwu/config/common.mk` 对非 `user` 构建包含 `ro.adb.secure=0`。这是独立的调试构建安全审查项，不能为了品牌清理顺手改变调试访问政策。
 
+此外，`uwuSettingsExt/res/values/strings.xml` 和简体中文资源将 `default_music_app` 配置为 `org.lineageos.twelve`，SmartSuggestions 与 AppSelection 会读取此默认包名。**源码常量不是已安装应用的证明**，但若 Twelve 不存在，可能使音乐建议的默认目标失效。后续应按实际已安装且能响应音乐 Intent 的应用决定默认目标，不宜随意代换为另一包名。
+
+`uwuSettingsExt/.../PuiSystemIconController.kt` 中的 `PUIThemedLineages*` 属于主题资源/标识符；直接更名可能破坏 Overlay 引用，应先检查运行时可见性。
+
 ## 区分曝光范围，而不是字符串全局替换
 
 | 分级 | 来源 | 处理策略 |
