@@ -1,0 +1,52 @@
+name: uwuAOSP MD3E Native Switch Patch QA
+
+on:
+  push:
+    branches: ["integration/op6-md3e-ksu-v08-switch"]
+    paths:
+      - "tools/ui-deployment/patches/uwu-sdk-md3e-switch-contrast.patch"
+      - "tools/ui-deployment/prepare_native_sources.sh"
+      - "tools/ui-deployment/tests/test_md3e_switch_palette.py"
+      - ".github/workflows/op6-md3e-switch-native-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/patches/uwu-sdk-md3e-switch-contrast.patch"
+      - "tools/ui-deployment/prepare_native_sources.sh"
+      - "tools/ui-deployment/tests/test_md3e_switch_palette.py"
+      - ".github/workflows/op6-md3e-switch-native-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-source-patch-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/patches
+            tools/ui-deployment/tests
+            tools/ui-deployment/prepare_native_sources.sh
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          repository: uwuAOSP/platform_uwu-sdk
+          ref: 75c696d97527dfbf5fd89471ae6ea1a13aeee4fd
+          path: uwu-sdk
+          filter: blob:none
+          sparse-checkout: |
+            uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
+          sparse-checkout-cone-mode: false
+      - name: Check and apply against exact upstream SHA
+        run: |
+          test "$(git -C uwu-sdk rev-parse HEAD)" = 75c696d97527dfbf5fd89471ae6ea1a13aeee4fd
+          PATCH="$GITHUB_WORKSPACE/tools/ui-deployment/patches/uwu-sdk-md3e-switch-contrast.patch"
+          git -C uwu-sdk apply --check "$PATCH"
+          git -C uwu-sdk apply "$PATCH"
+          git -C uwu-sdk apply --reverse --check "$PATCH"
+          sh -n tools/ui-deployment/prepare_native_sources.sh
+      - name: Verify tonal off switch, accessibility and shared component
+        run: python3 -m unittest discover -s tools/ui-deployment/tests -p 'test_md3e_switch_palette.py' -v
