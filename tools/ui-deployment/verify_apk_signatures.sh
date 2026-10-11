@@ -20,14 +20,14 @@ done
 digest() {
     # The original and built APK must both pass Android's signature validation.
     apk="$1"
-    result=$(apksigner verify --print-certs "$apk") || return 1
-    # Android signature identity is the complete set of signers, not just
-    # signer #1. Refuse multi-signer APKs until every signer/lineage has
-    # been independently audited against the installed ROM certificate.
-    if printf '%s\n' "$result" |
-        grep -Eq '^Signer #[2-9][0-9]* certificate SHA-256 digest:'; then
-        return 1
-    fi
+    # Check the actual target API level, not the runner's default. A v1-
+    # only or otherwise invalid APK must never pass the platform signer gate.
+    result=$(apksigner verify --min-sdk-version 37 --print-certs "$apk") || return 1
+    # Identity is the *entire* signer set. Reject any multi-signer APK,
+    # including signer #10+ (which the old #[2-9] regex missed).
+    signer_count=$(printf '%s\n' "$result" |
+        grep -Ec '^Signer #[0-9]+ certificate SHA-256 digest:' || :)
+    [ "$signer_count" -eq 1 ] || return 1
     hash=$(printf '%s\n' "$result" |
         sed -n 's/^Signer #1 certificate SHA-256 digest:[[:space:]]*//p' |
         tr -d '[:space:]')
