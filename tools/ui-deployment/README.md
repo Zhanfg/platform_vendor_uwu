@@ -38,3 +38,48 @@ Changing the recovery's verification policy is not a substitute for platform pac
 - An unbootable test must be recoverable by disabling the module in recovery/KernelSU safe mode; maintain a prior known-good system slot/backup. A/B does not automatically guarantee rollback after changing shared userdata.
 
 This is a staging workflow, not a finished flashable ROM or a bypass for signature checks.
+
+## OTA-aware KernelSU hotfix channel
+
+The `ksu-hotfix/` template and `package_ui_hotfix.sh` implement a separate
+**systemless hot-update layer**. Upstream A/B OTA continues unchanged and keeps
+its recovery signature / APK signature / AVB checks. The hotfix never flashes
+or modifies an A/B slot.
+
+1. Build each selected APK against the current uwuAOSP 17.0 ROM source and
+   sign it with the matching **original APK certificate**.
+2. Stage original APKs as `staging/original/<APK-name>`, built APKs as
+   `staging/built/<APK-name>`, and copy
+   `ksu-hotfix/target.properties.example` to
+   `staging/target.properties` after checking device properties.
+3. Run `sh tools/ui-deployment/package_ui_hotfix.sh` on a Linux build host,
+   with no arguments. Output: `tools/ui-deployment/out/uwu-ui-hotfix.zip`.
+   It will fail if no APK pair, invalid platform signature, unexpected build,
+   or missing build dependencies are found.
+4. Inspect ZIP contents and test only after checking the currently installed
+   KernelSU **mounting metamodule** and rollback/safe-mode procedure.
+
+**Before each mount**: the regular module's `post-fs-data.sh` runs before
+the KernelSU metamodule's `metamount.sh` in the documented KernelSU boot
+sequence. The guard checks device, API, ROM build ID, and the original
+per-component APK SHA-256. On mismatch, it writes `skip_mount` and preserves
+the upstream ROM view, without disabling verified boot. The pause is sticky,
+and a user must explicitly re-enable after installing a revalidated build.
+
+**On upstream OTA**: leave the module installed but let the guard suspend it
+if any original APK or ROM build ID has changed. Rebuild and revalidate our
+UI changes for the new OTA. Never blindly remount a previous ROM's SystemUI.
+
+**Scope limits**:
+- Applies only to four known `system_ext/priv-app` APK paths; no generic
+  platform APK replacement or untrusted path input.
+- Does not provide an instant code hot-swap: a privileged APK replacement
+  generally requires at least a controlled restart to take effect.
+- The read-only probe found `ksud` and `/data/adb/ksu`, **not** proof that
+  a functioning KernelSU mount metamodule is installed.
+- A signed, verified **RRO-only** live-resource channel may be added later;
+  it requires overlayable/idmap/target-policy verification before deployment.
+- The phone's reported `ro.build.fingerprint` is an Android 11 identity
+  despite Android 17, so compatibility is based on build ID + exact base APK
+  hashes, not fingerprint alone.
+
