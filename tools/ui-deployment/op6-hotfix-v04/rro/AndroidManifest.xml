@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.uwuaosp.hotfix.gesturepill.v04">
+    <application android:hasCode="false" android:label="uwuAOSP gesture handle fix"/>
+    <!-- SystemUI has no declared overlayable group for these resources.
+         This RRO only works when mounted as preinstalled system_ext/overlay. -->
+    <overlay
+        android:targetPackage="com.android.systemui"
+        android:isStatic="true"
+        android:priority="10"
+        android:resourcesMap="@xml/overlays" />
+</manifest>

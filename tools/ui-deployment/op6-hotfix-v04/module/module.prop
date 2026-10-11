@@ -1,0 +1,6 @@
+id=uwu-ui-live-hotfix
+name=uwuAOSP hotfix v0.4
+version=0.4.0
+versionCode=40
+author=uwuAOSP adaptation
+description=OnePlus 6 Android 17: SystemUI gesture pill RRO (no touch-geometry changes), guarded DPI 420.

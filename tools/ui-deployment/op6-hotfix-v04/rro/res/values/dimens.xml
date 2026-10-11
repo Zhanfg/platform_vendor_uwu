@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paint geometry only. Never change gesture inset, navbar height or
+         touch target. Normal and rotated NavigationHandle share radius. -->
+    <dimen name="navigation_handle_radius">0dp</dimen>
+    <dimen name="navigation_home_handle_additional_height_for_animation">0dp</dimen>
+</resources>

@@ -1,0 +1,65 @@
+name: OP6 SystemUI Gesture-Pill RRO Build
+
+on:
+  push:
+    branches: ["feat/op6-passthrough-gesture-pill-rro"]
+    paths:
+      - "tools/ui-deployment/op6-hotfix-v04/**"
+      - ".github/workflows/op6-hotfix-v04-rro-build.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/op6-hotfix-v04/**"
+      - ".github/workflows/op6-hotfix-v04-rro-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/op6-hotfix-v04
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Use the hosted runner's Android SDK
+        shell: bash
+        run: |
+          set -e
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          fi
+          [ -x "$SDKMANAGER" ] || { echo 'sdkmanager missing'; exit 2; }
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Test RRO constraints and shell syntax
+        run: |
+          python3 -m unittest discover -s tools/ui-deployment/op6-hotfix-v04/tests -p 'test_rro_contract.py' -v
+          for f in tools/ui-deployment/op6-hotfix-v04/module/*.sh; do sh -n "$f"; done
+      - name: Compile and sign REAL resource overlay APK
+        run: sh tools/ui-deployment/op6-hotfix-v04/build.sh
+      - name: Inspect packaged payload
+        run: |
+          FILE="tools/ui-deployment/op6-hotfix-v04/out/uwuAOSP hotfix v0.4.zip"
+          unzip -t "$FILE"
+          unzip -Z1 "$FILE" | grep -Fx 'system/system_ext/overlay/uwuGesturePillRRO.apk'
+          test "$(unzip -Z1 "$FILE" | grep -c '^system/system_ext/overlay/.*apk$')" -eq 1
+          if unzip -Z1 "$FILE" | grep -E '/(SystemUI|Settings|Launcher3QuickStep)[.]apk$'; then
+            echo 'Unsafe APK replacement found'; exit 1
+          fi
+      - name: Publish installable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: uwuAOSP-hotfix-v0.4-RRO
+          path: tools/ui-deployment/op6-hotfix-v04/out/uwuAOSP hotfix v0.4.zip
+          if-no-files-found: error
