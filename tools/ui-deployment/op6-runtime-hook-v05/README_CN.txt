@@ -9,6 +9,8 @@ com.android.systemui.moment.arc.MomentArcController 等类开发。
 
 修补内容：
 1. 绘制底部白条时跳过画圆角矩形，不更改任何导航/触控区域。
+   白条默认隐藏，与 v0.1-v0.3 使用的旧设置值脱钩。仅当显式设置
+   Settings.Secure.uwu_hotfix_hide_pill=0 时恢复绘制。
 2. 秒钟 Tick 保护：运行时检查 Clock 的原生 Handler 是否仍有效，
    避免在已清空 Handler 的视图生命周期路径上继续执行 Tick。
 3. Moment Arc：12 个图标与快捷方式查找从 SystemUI 主线程转移到
@@ -28,3 +30,9 @@ com.android.systemui.moment.arc.MomentArcController 等类开发。
 
 源码：Zhanfg/platform_vendor_uwu -> tools/ui-deployment/op6-runtime-hook-v05
 整合原生修复：Zhanfg/platform_frameworks_base PR #7
+
+安全启用顺序：安装 APK 后，在兼容的 LSPosed 管理器中只为
+com.android.systemui 勾选本模块作用域，再重新启动使其注入生效。
+若 SystemUI 出现异常，先在 LSPosed 中停用本模块，并重启恢复。
+由于版本采用 CI 临时测试签名，未来新 APK 可能不能直接覆盖安装；
+稳定发版前需要配置持久私钥，不能把测试签名冒充为平台签名。
