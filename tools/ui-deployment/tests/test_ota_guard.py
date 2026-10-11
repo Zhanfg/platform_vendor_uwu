@@ -18,13 +18,13 @@ class BootGuardTests(unittest.TestCase):
         self.mod = self.root / "module"
         self.mod.mkdir()
         shutil.copyfile(SOURCE, self.mod / "post-fs-data.sh")
-        (self.mod / "module.prop").write_text("id=uwu-ui-hotfix-settings\\n")
+        (self.mod / "module.prop").write_text("id=uwu-ui-hotfix-settings\n")
         mountify = self.root / "rom/data/adb/modules/mountify"
         mountify.mkdir(parents=True)
-        (mountify / "metamount.sh").write_text("#!/system/bin/sh\\n")
+        (mountify / "metamount.sh").write_text("#!/system/bin/sh\n")
         config = self.root / "rom/data/adb/mountify"
         config.mkdir(parents=True)
-        (config / "config.sh").write_text("mountify_mounts=2\\n")
+        (config / "config.sh").write_text("mountify_mounts=2\n")
         (self.mod / "target.properties").write_text(
             "device=OnePlus6\nsdk=37\nbuild_id=CP2A.260605.016\n"
         )
@@ -86,13 +86,13 @@ class BootGuardTests(unittest.TestCase):
 
     def test_manual_mode_without_our_module_blocks(self):
         config = self.root / "rom/data/adb/mountify"
-        (config / "config.sh").write_text("mountify_mounts=1\\n")
-        (config / "modules.txt").write_text("some-other-module\\n")
+        (config / "config.sh").write_text("mountify_mounts=1\n")
+        (config / "modules.txt").write_text("some-other-module\n")
         self.assertIn("Mountify manual list excludes this module", self.run_guard())
 
     def test_manual_mode_with_module_id_allows(self):
         config = self.root / "rom/data/adb/mountify"
-        (config / "config.sh").write_text("mountify_mounts=1\\n")
+        (config / "config.sh").write_text("mountify_mounts=1\n")
         (config / "modules.txt").write_text("uwu-ui-hotfix-settings\\n")
         self.assertTrue(self.run_guard().startswith("COMPATIBLE:"))
 
