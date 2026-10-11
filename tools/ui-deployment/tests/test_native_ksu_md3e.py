@@ -34,7 +34,7 @@ class NativeHotfixContract(unittest.TestCase):
 
     def test_exact_source_commit_locks(self):
         for sha in (
-            "ccaa206b36db45ed6add3eec3e2b4812f31b00c0",
+            "5f78233070530b853fcc6501776f19d00393ca63",
             "c3cfe7b63318bb17f6e8e542f4a7e33e1b38f94d",
             "601c7068193663506e154f1333f7dcc070f7fb49",
             "289a20b44e68ce8b3836335b32793bbfd243213c"
