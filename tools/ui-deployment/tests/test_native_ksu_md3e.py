@@ -62,8 +62,17 @@ class NativeHotfixContract(unittest.TestCase):
         self.assertNotIn("pkill",SERVICE)
         self.assertNotIn("killall",SERVICE)
 
+    def test_full_rom_source_checkout_requires_all_integration_shas(self):
+        src=(ROOT/"prepare_native_sources.sh").read_text()
+        for name in ("frameworks/base","packages/apps/Settings",
+                     "packages/apps/Launcher3","packages/apps/uwuSettingsExt",
+                     "uwu-sdk"):
+            self.assertIn(name,src)
+        self.assertIn("git -C \"$ANDROID_ROOT/uwu-sdk\" apply --check",src)
+        self.assertIn("patches/uwu-sdk-md3e-a11y.patch",src)
+
     def test_all_posix_shell_scripts_parse(self):
-        for f in [ROOT/"package_ui_hotfix.sh",ROOT/"verify_apk_signatures.sh",*MOD.glob("*.sh")]:
+        for f in [ROOT/"package_ui_hotfix.sh",ROOT/"verify_apk_signatures.sh",ROOT/"prepare_native_sources.sh",*MOD.glob("*.sh")]:
             r=subprocess.run(["sh","-n",str(f)],capture_output=True,text=True)
             self.assertEqual(r.returncode,0,f"{f}: {r.stderr}")
 
