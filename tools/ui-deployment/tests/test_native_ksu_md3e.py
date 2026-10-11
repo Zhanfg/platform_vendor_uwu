@@ -17,17 +17,17 @@ class NativeHotfixContract(unittest.TestCase):
     def test_module_id_and_only_one_mount_channel(self):
         p=(MOD/"module.prop").read_text()
         self.assertIn("id=uwu-ui-live-hotfix",p)
-        self.assertIn("name=uwuAOSP hotfix v0.6",p)
+        self.assertIn("name=uwuAOSP hotfix v0.7",p)
         self.assertIn("Mountify",GUARD)
         self.assertNotIn("LSPosed",SERVICE)
         self.assertNotIn("XposedHelpers",PKG)
 
-    def test_all_four_signed_apps_required_no_partial_zip(self):
+    def test_all_five_signed_apps_required_no_partial_zip(self):
         self.assertIn('count" -eq 4',PKG)
         self.assertIn('sh "$ROOT/verify_apk_signatures.sh"',PKG)
         self.assertIn("BLOCKED signer mismatch",VERIFY)
         self.assertIn("apksigner verify --print-certs",VERIFY)
-        for f in ("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk"):
+        for f in ("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk","ThemePicker.apk"):
             self.assertIn(f,PKG)
         self.assertIn("payload-apks.sha256",PKG)
         self.assertIn("base-apks.sha256",PKG)
@@ -41,6 +41,9 @@ class NativeHotfixContract(unittest.TestCase):
         ):
             self.assertIn(sha,LOCK)
         self.assertIn("420",LOCK)
+        self.assertIn("0859e053a7de17180b4e8168705732b46515b787", LOCK)
+        self.assertIn("ab09a63af48acb702308c8f4b5a2c6d95f911ca66515b3978e2cbcdda15e0c14", LOCK)
+        self.assertIn("f328d25307f9426677ed009ef234b5e9772a9a7473fdb4b6dc22d9d4d9d4fa8b", GUARD)
 
     def test_installed_rom_guard_at_boot(self):
         self.assertIn("CP2A.260605.016",SERVICE)
@@ -66,6 +69,7 @@ class NativeHotfixContract(unittest.TestCase):
         src=(ROOT/"prepare_native_sources.sh").read_text()
         for name in ("frameworks/base","packages/apps/Settings",
                      "packages/apps/Launcher3","packages/apps/uwuSettingsExt",
+                     "packages/apps/ThemePicker",
                      "uwu-sdk"):
             self.assertIn(name,src)
         self.assertIn("git -C \"$ANDROID_ROOT/uwu-sdk\" apply --check",src)
@@ -83,6 +87,6 @@ class NativeHotfixContract(unittest.TestCase):
                          cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                          text=True,timeout=10)
         self.assertNotEqual(p.returncode,0)
-        self.assertFalse((ROOT/"out"/"uwuAOSP hotfix v0.6.zip").exists())
+        self.assertFalse((ROOT/"out"/"uwuAOSP hotfix v0.7.zip").exists())
 
 if __name__=="__main__": unittest.main()
