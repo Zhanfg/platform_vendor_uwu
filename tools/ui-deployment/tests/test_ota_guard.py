@@ -93,7 +93,7 @@ class BootGuardTests(unittest.TestCase):
     def test_manual_mode_with_module_id_allows(self):
         config = self.root / "rom/data/adb/mountify"
         (config / "config.sh").write_text("mountify_mounts=1\n")
-        (config / "modules.txt").write_text("uwu-ui-hotfix-settings\\n")
+        (config / "modules.txt").write_text("uwu-ui-hotfix-settings\n")
         self.assertTrue(self.run_guard().startswith("COMPATIBLE:"))
 
     def test_mountify_disabled_blocks(self):
