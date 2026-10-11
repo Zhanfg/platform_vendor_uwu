@@ -1,20 +1,27 @@
 diff --git a/composer/hwc_display.cpp b/composer/hwc_display.cpp
 --- a/composer/hwc_display.cpp
 +++ b/composer/hwc_display.cpp
-@@ -368,6 +368,21 @@ void HWCColorMode::PopulateColorModes() {
+@@ -368,6 +368,28 @@ void HWCColorMode::PopulateColorModes() {
          }
        }
  
-+      // Some legacy SDM845 panel profiles expose real SDR/PQ/HLG modes,
-+      // but leave render_intent at -1. Treat only standard, recognized
-+      // modes as COLORIMETRIC; never manufacture an unsupported mode.
-+      // The map still refers exclusively to SDM-enumerated mode strings.
++      // Legacy SOFEF00_M QDCM modes omit RenderIntent. Restrict the fallback
++      // to real, exact canonical mode names seen on the OnePlus 6.
++      // Never map advance_* presets: some claim sRGB despite their names,
++      // and mapping those would overwrite the calibrated SRGB selection.
++      const bool op6_legacy_standard =
++          (mode_string == "CTS" && color_gamut == kNative &&
++           dynamic_range == kSdr) ||
++          (mode_string == "SRGB" && color_gamut == kSrgb &&
++           dynamic_range == kSdr) ||
++          (mode_string == "DCI_P3" && color_gamut == kDcip3 &&
++           dynamic_range == kSdr) ||
++          (mode_string == "bt2020_pq" && color_gamut == kBt2020 &&
++           transfer == kSt2084) ||
++          (mode_string == "bt2020_hlg" && color_gamut == kBt2020 &&
++           transfer == kHlg);
 +      if (int_render_intent == -1 && pic_quality == kStandard &&
-+          (color_gamut == kNative || color_gamut == kSrgb ||
-+           color_gamut == kDcip3 ||
-+           (color_gamut == kBt2020 &&
-+            (transfer == kSt2084 || transfer == kHlg ||
-+             transfer == kSrgb)))) {
++          op6_legacy_standard) {
 +        DLOGW("Legacy color mode %s has no render intent; using COLORIMETRIC",
 +              mode_string.c_str());
 +        int_render_intent = static_cast<int>(RenderIntent::COLORIMETRIC);
@@ -23,4 +30,3 @@ diff --git a/composer/hwc_display.cpp b/composer/hwc_display.cpp
        if (int_render_intent < 0 || int_render_intent > MAX_EXTENDED_RENDER_INTENT) {
          DLOGW("Invalid render intent %d for mode %s", int_render_intent, mode_string.c_str());
          continue;
-       }
