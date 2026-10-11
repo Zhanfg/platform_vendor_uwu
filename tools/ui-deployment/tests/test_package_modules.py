@@ -35,7 +35,7 @@ class PackagerTests(unittest.TestCase):
             '*) hex="$(printf "%064d" 1)";;\n'
             'esac\n'
             'echo "Signer #1 certificate SHA-256 digest: $hex"\n'
-            'case "$(head -c 5 "$apk")" in MULTI*) echo "Signer #2 certificate SHA-256 digest: $hex";; esac\n'
+            'case "$(head -c 5 "$apk")" in MULTI*) echo "Signer #2 certificate SHA-256 digest: $hex";; TENXX*) echo "Signer #10 certificate SHA-256 digest: $hex";; esac\n'
         )
         signer.chmod(0o755)
         self.env=os.environ|{"PATH":str(self.bin)+":"+os.environ["PATH"]}
@@ -82,6 +82,16 @@ class PackagerTests(unittest.TestCase):
         # Simulates an APK with the right first signer plus a second signer.
         # Android package identity would not be identical to the original.
         (self.tree/"staging/built/SystemUI.apk").write_bytes(b"MULTI-SIGNER")
+        r=self.run_pack()
+        self.assertNotEqual(r.returncode,0)
+        self.assertIn("Signature verification failed: built SystemUI.apk",r.stderr)
+        self.no_zip()
+
+    def test_tenth_signer_is_never_accepted_as_same_certificate(self):
+        for name in COMPONENTS:
+            self.apk(name)
+        # Historically a [2-9] regex missed signer #10 and higher.
+        (self.tree/"staging/built/SystemUI.apk").write_bytes(b"TENXX-SIGNER")
         r=self.run_pack()
         self.assertNotEqual(r.returncode,0)
         self.assertIn("Signature verification failed: built SystemUI.apk",r.stderr)
