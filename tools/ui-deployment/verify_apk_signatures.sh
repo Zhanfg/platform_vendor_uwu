@@ -21,6 +21,13 @@ digest() {
     # The original and built APK must both pass Android's signature validation.
     apk="$1"
     result=$(apksigner verify --print-certs "$apk") || return 1
+    # Android signature identity is the complete set of signers, not just
+    # signer #1. Refuse multi-signer APKs until every signer/lineage has
+    # been independently audited against the installed ROM certificate.
+    if printf '%s\n' "$result" |
+        grep -Eq '^Signer #[2-9][0-9]* certificate SHA-256 digest:'; then
+        return 1
+    fi
     hash=$(printf '%s\n' "$result" |
         sed -n 's/^Signer #1 certificate SHA-256 digest:[[:space:]]*//p' |
         tr -d '[:space:]')
