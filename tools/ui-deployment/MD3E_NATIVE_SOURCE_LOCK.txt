@@ -1,4 +1,4 @@
-uwuAOSP hotfix v0.6 — OnePlus 6 Android 17.0.101 native build lock
+uwuAOSP hotfix v0.7 — OnePlus 6 Android 17.0.101 native build lock
 ROM build ID=CP2A.260605.016
 device=OnePlus6
 Android API=37
@@ -7,6 +7,7 @@ module_id=uwu-ui-live-hotfix
 backend=KernelSU + Mountify TMPFS/OverlayFS
 runtime_hooks=none
 merged_Source_20261011:
+ThemePicker=Zhanfg/platform_packages_apps_ThemePicker@0859e053a7de17180b4e8168705732b46515b787 (PR 1)
 frameworks/base=Zhanfg/platform_frameworks_base@5f78233070530b853fcc6501776f19d00393ca63 (PR 8)
 Settings=Zhanfg/platform_packages_apps_Settings@c3cfe7b63318bb17f6e8e542f4a7e33e1b38f94d (PR 4)
 Launcher3=Zhanfg/platform_packages_apps_Launcher3@601c7068193663506e154f1333f7dcc070f7fb49 (PR 4)
@@ -53,5 +54,9 @@ uwu-sdk patch=tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch
   git apply tested against pinned upstream; not an LSPosed hook
 ThemePicker source=Zhanfg/platform_packages_apps_ThemePicker@0859e053a7de17180b4e8168705732b46515b787 (PR 1)
   localizes freeform color palette contentDescription
-  NOT included in 4-APK release until installed ThemePicker signer/path verified
+  exact original APK SHA256=ab09a63af48acb702308c8f4b5a2c6d95f911ca66515b3978e2cbcdda15e0c14
+  original ThemePicker certificate SHA256=c9e32567f77044250586afa8ca7f17e4bed381ef7e98403a69687025ae207ac7
+  retained uwuPrism product overlay SHA256=f328d25307f9426677ed009ef234b5e9772a9a7473fdb4b6dc22d9d4d9d4fa8b
+  ThemePicker + uwuPrism signed by a distinct original certificate from SystemUI/framework-res
+  included as fifth required APK only when actual rebuilt APK matches original cert
 SystemUI QS details=source PR8 adds localized TalkBack back/open Settings strings
