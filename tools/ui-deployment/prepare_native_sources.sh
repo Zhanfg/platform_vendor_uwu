@@ -32,14 +32,11 @@ else
   git -C "$ANDROID_ROOT/uwu-sdk" apply "$PATCH"
   echo 'Applied: uwuCompose navigate-up native accessibility patch'
 fi
-# ThemePicker is independently signed and is NOT part of the four APK Mountify
-# payload until installed path, original cert and ROM compatibility are known.
-if [ -d "$ANDROID_ROOT/packages/apps/ThemePicker" ]; then
-  actual=$(git -C "$ANDROID_ROOT/packages/apps/ThemePicker" rev-parse HEAD 2>/dev/null || :)
-  if [ "$actual" != 0859e053a7de17180b4e8168705732b46515b787 ]; then
-    echo "NOTICE: ThemePicker MD3E accessibility PR #1 not synced ($actual)"
-  fi
-fi
+# ThemePicker/uwuPrism are a second signing domain. The original files
+# were found and hashed in the user-provided ROM101 reference archive, so
+# ThemePicker must now be built at the pinned MD3E accessibility revision.
+# The product uwuPrism RRO is kept unchanged and verified at mount time.
+lock packages/apps/ThemePicker 0859e053a7de17180b4e8168705732b46515b787 ThemePicker
 echo 'Native source gate READY. Compile in the full Android 17 tree using'
-echo 'the ROM-compatible platform/Launcher signing configuration.'
+echo 'the ROM-compatible platform/Launcher/ThemePicker signing configuration.'
 echo 'Never replace the installed privileged APK if signer identity differs.'

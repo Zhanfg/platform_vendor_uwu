@@ -7,7 +7,7 @@ from pathlib import Path
 import os, shutil, subprocess, tempfile, unittest
 
 ROOT=Path(__file__).resolve().parents[1]
-COMPONENTS=("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk")
+COMPONENTS=("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk","ThemePicker.apk")
 
 class PackagerTests(unittest.TestCase):
     def setUp(self):
@@ -35,6 +35,7 @@ class PackagerTests(unittest.TestCase):
             '*) hex="$(printf "%064d" 1)";;\n'
             'esac\n'
             'echo "Signer #1 certificate SHA-256 digest: $hex"\n'
+            'case "$(head -c 5 "$apk")" in MULTI*) echo "Signer #2 certificate SHA-256 digest: $hex";; esac\n'
         )
         signer.chmod(0o755)
         self.env=os.environ|{"PATH":str(self.bin)+":"+os.environ["PATH"]}
@@ -52,7 +53,7 @@ class PackagerTests(unittest.TestCase):
     def no_zip(self):
         self.assertEqual(list((self.tree/"out").rglob("*.zip")),[])
 
-    def test_four_mock_signed_components_still_fail_exact_apk_hash(self):
+    def test_five_mock_signed_components_still_fail_exact_apk_hash(self):
         for name in COMPONENTS:
             self.apk(name)
         r=self.run_pack()
@@ -74,6 +75,21 @@ class PackagerTests(unittest.TestCase):
         self.assertNotEqual(r.returncode,0)
         self.assertIn("signer mismatch",r.stderr.lower())
         self.no_zip()
+
+    def test_same_first_signer_but_extra_second_signer_rejected(self):
+        for name in COMPONENTS:
+            self.apk(name)
+        # Simulates an APK with the right first signer plus a second signer.
+        # Android package identity would not be identical to the original.
+        (self.tree/"staging/built/SystemUI.apk").write_bytes(b"MULTI-SIGNER")
+        r=self.run_pack()
+        self.assertNotEqual(r.returncode,0)
+        self.assertIn("Signature verification failed: built SystemUI.apk",r.stderr)
+        self.no_zip()
+
+    def test_temp_zip_is_pid_unique(self):
+        src=(ROOT/"package_ui_hotfix.sh").read_text()
+        self.assertIn('.uwuAOSP-hotfix-v0.7.$.zip',src)
 
     def test_unknown_apk_is_not_accepted(self):
         self.apk("Unrecognized.apk")

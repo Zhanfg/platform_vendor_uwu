@@ -9,7 +9,7 @@ BUILT="$STAGE/built"
 PROPS="$STAGE/target.properties"
 TEMPLATE="$ROOT/ksu-hotfix"
 OUT="$ROOT/out"
-FINAL="$OUT/uwuAOSP hotfix v0.6.zip"
+FINAL="$OUT/uwuAOSP hotfix v0.7.zip"
 for bin in apksigner sha256sum zip mktemp sed cmp grep cp; do
     command -v "$bin" >/dev/null 2>&1 || { echo "Missing $bin" >&2; exit 2; }
 done
@@ -31,7 +31,7 @@ grep -qx 'build_id=CP2A.260605.016' "$PROPS" || {
 for apk in "$BUILT"/*.apk; do
     [ -f "$apk" ] || continue
     case "${apk##*/}" in
-        SystemUI.apk|Settings.apk|Launcher3QuickStep.apk|uwuSettingsExt.apk) : ;;
+        SystemUI.apk|Settings.apk|Launcher3QuickStep.apk|uwuSettingsExt.apk|ThemePicker.apk) : ;;
         *) echo "Unrecognized APK ${apk##*/}" >&2; exit 4 ;;
     esac
 done
@@ -51,7 +51,7 @@ chmod 0755 "$WORK/customize.sh" "$WORK/post-fs-data.sh" \
 : > "$WORK/payload-apks.sha256"
 cp "$ROOT/MD3E_NATIVE_SOURCE_LOCK.txt" "$WORK/source-lock.txt"
 count=0
-for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk; do
+for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk ThemePicker.apk; do
     [ -f "$BUILT/$name" ] || continue
     [ -f "$ORIGINAL/$name" ] || { echo "Missing baseline: $name" >&2; exit 5; }
     if cmp -s "$ORIGINAL/$name" "$BUILT/$name"; then
@@ -63,6 +63,7 @@ for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk;
         Settings.apk) component=settings; dest=system_ext/priv-app/Settings/Settings.apk ;;
         Launcher3QuickStep.apk) component=launcher; dest=system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk ;;
         uwuSettingsExt.apk) component=settingsext; dest=system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk ;;
+        ThemePicker.apk) component=themepicker; dest=system_ext/priv-app/ThemePicker/ThemePicker.apk ;;
     esac
     mkdir -p "$WORK/system/$(dirname "$dest")"
     cp "$BUILT/$name" "$WORK/system/$dest"
@@ -73,7 +74,8 @@ for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk;
       SystemUI.apk:47e4e849e99a695b3c698566fb451cf3cd671ddb17f3e5844d15b2b35188f841|\
       Settings.apk:16b8902482965ce7246e2c2e20bb29b627dbfff7472f9bd90e51ac47adf3ae98|\
       Launcher3QuickStep.apk:c20cb66069a8391005d2ef2de89cbb268bd7928d3874c6bfe773bc5c3a81a3b7|\
-      uwuSettingsExt.apk:c3884c97ff320e4176e281abaaf4c43c81f1e6a521dd34507dc7885b230ddef7)
+      uwuSettingsExt.apk:c3884c97ff320e4176e281abaaf4c43c81f1e6a521dd34507dc7885b230ddef7|\
+      ThemePicker.apk:ab09a63af48acb702308c8f4b5a2c6d95f911ca66515b3978e2cbcdda15e0c14)
         : ;;
       *) echo "BLOCKED: $name is not the locked 17.0.101 APK" >&2; exit 5 ;;
     esac
@@ -83,11 +85,11 @@ for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk;
     count=$((count + 1))
     echo "INCLUDED: $component"
 done
-# This v0.6 is a coherent four-component MD3E/SystemUI release.
+# This v0.7 is a coherent five-component MD3E/SystemUI release.
 # It must not silently ship a partial Settings-only or SystemUI-only zip.
-[ "$count" -eq 4 ] || { echo "Incomplete MD3E build: expected all 4 signed changed APKs, got $count" >&2; exit 6; }
+[ "$count" -eq 5 ] || { echo "Incomplete MD3E build: expected all 5 signed changed APKs, got $count" >&2; exit 6; }
 # One ZIP, no duplicate payload storage. Atomic replacement on host.
-TMPZIP="$OUT/.uwuAOSP-hotfix-v0.6.$.zip"
+TMPZIP="$OUT/.uwuAOSP-hotfix-v0.7.$.zip"
 trap 'rm -rf "$WORK"; rm -f "$TMPZIP"' EXIT HUP INT TERM
 (cd "$WORK" && zip -q -9 -r "$TMPZIP" .)
 [ -s "$TMPZIP" ] || { echo 'Empty ZIP' >&2; exit 7; }

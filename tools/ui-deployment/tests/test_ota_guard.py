@@ -31,6 +31,20 @@ class BootGuardTests(unittest.TestCase):
         self.apk = self.root / "rom" / TARGET.lstrip("/")
         self.apk.parent.mkdir(parents=True)
         self.apk.write_bytes(b"known-good-original-apk")
+        # A preserved product overlay is a release dependency of the
+        # independently signed ThemePicker package (not a UI settings toggle).
+        self.prism = self.root / "rom/system/product/overlay/uwuPrism__uwu_enchilada__auto_generated_rro_product.apk"
+        self.prism.parent.mkdir(parents=True,exist_ok=True)
+        # Preimage for actual ROM hash is not supplied to the synthetic test.
+        # A fixture needs a real hash from the exact bytes, so patch the
+        # pinned value only in the TEMPORARY test script, never in sources.
+        self.prism.write_bytes(b"ROM101-Prism-test-fixture")
+        guard=(self.mod / "post-fs-data.sh")
+        text=guard.read_text().replace(
+            "f328d25307f9426677ed009ef234b5e9772a9a7473fdb4b6dc22d9d4d9d4fa8b",
+            hashlib.sha256(self.prism.read_bytes()).hexdigest(),
+        )
+        guard.write_text(text)
         digest = hashlib.sha256(self.apk.read_bytes()).hexdigest()
         (self.mod / "base-apks.sha256").write_text(f"{TARGET}|{digest}\n")
         bindir = self.root / "bin"
@@ -99,6 +113,15 @@ class BootGuardTests(unittest.TestCase):
     def test_mountify_disabled_blocks(self):
         (self.root / "rom/data/adb/modules/mountify/disable").touch()
         self.assertIn("Mountify disabled", self.run_guard())
+
+    def test_prism_overlay_hash_drift_blocks_system_mount(self):
+        self.prism.write_bytes(b"conflicting-theme-overlay")
+        self.assertIn("Prism baseline differs", self.run_guard())
+        self.assertTrue((self.mod / "skip_mount").exists())
+
+    def test_missing_prism_overlay_blocks(self):
+        self.prism.unlink()
+        self.assertIn("ThemePicker color overlay missing", self.run_guard())
 
     def test_unknown_target_blocks(self):
         (self.mod / "base-apks.sha256").write_text("/system/etc/passwd|abc\n")

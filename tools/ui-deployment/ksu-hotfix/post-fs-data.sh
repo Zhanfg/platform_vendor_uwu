@@ -54,7 +54,8 @@ while IFS='|' read -r origin hash; do
         /system/system_ext/priv-app/SystemUI/SystemUI.apk|\
         /system/system_ext/priv-app/Settings/Settings.apk|\
         /system/system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk|\
-        /system/system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk) ;;
+        /system/system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk|\
+        /system/system_ext/priv-app/ThemePicker/ThemePicker.apk) ;;
         *) block 'unexpected target path' ;;
     esac
     case "$hash" in ''|*[!0-9a-f]*) block 'invalid digest' ;; esac
@@ -70,6 +71,15 @@ while IFS='|' read -r origin hash; do
     count=$((count + 1))
 done < "$BASES"
 [ "$count" -gt 0 ] || block 'empty baseline list'
+# Exact ROM101 theme color overlay belongs to a different signing domain
+# from SystemUI. ThemePicker updates are forbidden if the matching product
+# color RRO was changed by another module or OTA.
+prism="$data_root/system/product/overlay/uwuPrism__uwu_enchilada__auto_generated_rro_product.apk"
+[ -r "$prism" ] || block 'ThemePicker color overlay missing'
+prism_hash=$(sha256sum "$prism" 2>/dev/null | sed 's/[[:space:]].*//') || block 'Prism hash read failure'
+[ "$prism_hash" = f328d25307f9426677ed009ef234b5e9772a9a7473fdb4b6dc22d9d4d9d4fa8b ] ||
+    block 'Prism baseline differs from ROM101'
+
 # Sticky skip_mount must be cleared only after user re-enables a verified update.
 if [ -e "$BLOCK" ]; then
     write_state 'COMPATIBLE BUT PAUSED: explicit reenable required'

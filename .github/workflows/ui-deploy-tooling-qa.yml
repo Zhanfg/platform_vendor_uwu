@@ -2,7 +2,7 @@ name: UI Deployment Tooling Static QA
 
 on:
   push:
-    branches: ["feat/**"]
+    branches: ["feat/**", "integration/op6-md3e-ksu-v07-theme"]
     paths:
       - "tools/ui-deployment/**"
       - ".github/workflows/ui-deploy-tooling-qa.yml"
