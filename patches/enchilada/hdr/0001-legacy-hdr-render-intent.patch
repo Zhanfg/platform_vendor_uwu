@@ -1,0 +1,26 @@
+diff --git a/composer/hwc_display.cpp b/composer/hwc_display.cpp
+--- a/composer/hwc_display.cpp
++++ b/composer/hwc_display.cpp
+@@ -368,6 +368,21 @@ void HWCColorMode::PopulateColorModes() {
+         }
+       }
+ 
++      // Some legacy SDM845 panel profiles expose real SDR/PQ/HLG modes,
++      // but leave render_intent at -1. Treat only standard, recognized
++      // modes as COLORIMETRIC; never manufacture an unsupported mode.
++      // The map still refers exclusively to SDM-enumerated mode strings.
++      if (int_render_intent == -1 && pic_quality == kStandard &&
++          (color_gamut == kNative || color_gamut == kSrgb ||
++           color_gamut == kDcip3 ||
++           (color_gamut == kBt2020 &&
++            (transfer == kSt2084 || transfer == kHlg ||
++             transfer == kSrgb)))) {
++        DLOGW("Legacy color mode %s has no render intent; using COLORIMETRIC",
++              mode_string.c_str());
++        int_render_intent = static_cast<int>(RenderIntent::COLORIMETRIC);
++      }
++
+       if (int_render_intent < 0 || int_render_intent > MAX_EXTENDED_RENDER_INTENT) {
+         DLOGW("Invalid render intent %d for mode %s", int_render_intent, mode_string.c_str());
+         continue;
+       }
