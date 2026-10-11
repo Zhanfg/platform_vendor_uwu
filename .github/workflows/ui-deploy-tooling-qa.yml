@@ -26,7 +26,12 @@ jobs:
             tools/ui-deployment
           sparse-checkout-cone-mode: true
       - name: POSIX shell syntax
-        run: sh -n tools/ui-deployment/verify_apk_signatures.sh
+        run: |
+          sh -n tools/ui-deployment/verify_apk_signatures.sh
+          sh -n tools/ui-deployment/package_ui_hotfix.sh
+          sh -n tools/ui-deployment/ksu-hotfix/post-fs-data.sh
+      - name: Simulate upstream OTA compatibility
+        run: python3 -m unittest discover -s tools/ui-deployment/tests -p "test_ota_guard.py" -v
       - name: Fail closed without baseline APK pairs
         run: |
           if sh tools/ui-deployment/verify_apk_signatures.sh; then
