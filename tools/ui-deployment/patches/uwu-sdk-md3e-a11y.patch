@@ -49,3 +49,20 @@ new file mode 100644
 +<resources>
 +    <string name="uwu_settings_navigate_up">向上返回</string>
 +</resources>
+diff --git a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
+--- a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
++++ b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
+@@ -236,10 +236,11 @@
+         colors = SwitchDefaults.colors(
+             checkedThumbColor = onPrimary,
+             checkedTrackColor = primary,
+             checkedBorderColor = primary,
+-            uncheckedThumbColor = outline,
++            uncheckedThumbColor = outline.copy(alpha = 0.65f),
+             uncheckedTrackColor = surfaceHighest,
+-            uncheckedBorderColor = outline,
++            uncheckedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
++            disabledUncheckedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+             checkedIconColor = primary,
+             uncheckedIconColor = surfaceHighest,
+         ),
