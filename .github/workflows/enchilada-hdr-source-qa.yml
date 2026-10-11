@@ -25,8 +25,40 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: LineageOS/android_hardware_qcom_sm7250_display
-          ref: lineage-24.0
+          ref: d3fae6913731a30c135a6cd1fab803913da06998
           path: reference-hwc
+      - uses: actions/checkout@v4
+        with:
+          repository: uwuAOSP/platform_manifests
+          ref: uwu-17.0
+          path: official-uwu-manifest
+      - name: Verify official Android 17 display source provenance
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root = ET.parse('official-uwu-manifest/snippets/lineage.xml').getroot()
+          hits = [p for p in root.findall('project')
+                  if p.get('path') == 'hardware/qcom/sm7250/display']
+          assert len(hits) == 1, hits
+          assert hits[0].get('name') == 'LineageOS/android_hardware_qcom_sm7250_display'
+          assert hits[0].get('remote') == 'lineageos'
+          assert 'name: "vendor.qti.hardware.display.composer-service"' in Path(
+              'reference-hwc/composer/Android.bp').read_text()
+          print('Official uwu-17.0 manifest -> Qualcomm sm7250 HWC source and build target OK')
+          PY
+      - name: Check guarded HWC build-tree preparer syntax
+        run: |
+          sh -n vendor-uwu/patches/enchilada/hdr/tools/prepare_op6_hdr_hwc_build.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('vendor-uwu/patches/enchilada/hdr/tools/prepare_op6_hdr_hwc_build.sh').read_text()
+          assert 'TARGET_PRODUCT' in s and '*enchilada*' in s
+          assert 'd3fae6913731a30c135a6cd1fab803913da06998' in s
+          assert 'git -C "$SRC" apply --check' in s
+          for bad in ('flash boot', 'flash dtbo', 'insmod ', 'setprop ', 'settings put '):
+              assert bad not in s, bad
+          PY
       - name: Verify patch applies to the reference source
         run: |
           cd reference-hwc
