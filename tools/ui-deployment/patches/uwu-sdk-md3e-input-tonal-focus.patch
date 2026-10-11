@@ -1,0 +1,70 @@
+diff --git a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSearchField.kt b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSearchField.kt
+--- a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSearchField.kt
++++ b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSearchField.kt
+@@ -6,6 +6,8 @@
+ package org.uwuaosp.compose.settingslib
+ 
+ import androidx.compose.foundation.BorderStroke
++import androidx.compose.foundation.interaction.MutableInteractionSource
++import androidx.compose.foundation.interaction.collectIsFocusedAsState
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.RowScope
+ import androidx.compose.foundation.layout.fillMaxWidth
+@@ -22,6 +24,7 @@
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.SolidColor
+@@ -38,13 +41,19 @@
+     leadingIcon: ImageVector = Icons.Outlined.Search,
+     trailingContent: (@Composable RowScope.() -> Unit)? = null,
+ ) {
++    val searchInteractionSource = remember { MutableInteractionSource() }
++    val isFocused = searchInteractionSource.collectIsFocusedAsState().value
+     Surface(
+         modifier = modifier
+             .fillMaxWidth()
+             .heightIn(min = 72.dp),
+         shape = CircleShape,
+-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
++        color = MaterialTheme.colorScheme.surfaceContainerHigh,
++        border = BorderStroke(
++            width = if (isFocused) 2.dp else 1.dp,
++            color = if (isFocused) MaterialTheme.colorScheme.primary
++                else MaterialTheme.colorScheme.outlineVariant,
++        ),
+     ) {
+         Row(
+             modifier = Modifier
+@@ -60,6 +69,7 @@
+             BasicTextField(
+                 value = query,
+                 onValueChange = onQueryChange,
++                interactionSource = searchInteractionSource,
+                 modifier = Modifier
+                     .weight(1f)
+                     .padding(start = 12.dp),
+diff --git a/uwuCompose/src/org/uwuaosp/compose/settingslib/TextInputPreferenceDialog.kt b/uwuCompose/src/org/uwuaosp/compose/settingslib/TextInputPreferenceDialog.kt
+--- a/uwuCompose/src/org/uwuaosp/compose/settingslib/TextInputPreferenceDialog.kt
++++ b/uwuCompose/src/org/uwuaosp/compose/settingslib/TextInputPreferenceDialog.kt
+@@ -158,14 +158,14 @@
+     val indicatorColor = when {
+         isError -> MaterialTheme.colorScheme.error
+         focused -> MaterialTheme.colorScheme.primary
+-        else -> MaterialTheme.colorScheme.onSurfaceVariant
++        else -> MaterialTheme.colorScheme.outlineVariant
+     }
+     Column(modifier = modifier) {
+         Box(
+             modifier = Modifier
+                 .fillMaxWidth()
+                 .heightIn(min = 48.dp)
+-                .background(MaterialTheme.colorScheme.surfaceVariant)
++                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                 .padding(InputPadding),
+             contentAlignment = Alignment.CenterStart,
+         ) {
