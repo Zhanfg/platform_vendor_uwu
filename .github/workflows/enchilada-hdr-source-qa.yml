@@ -48,3 +48,17 @@ jobs:
               assert fragment not in text, fragment
           print('Source patch constraints OK (no binary compilation or device validation)')
           PY
+      - name: Validate OnePlus 6 read-only HWC fingerprint probe
+        run: |
+          sh -n vendor-uwu/patches/enchilada/hdr/tools/op6_hwc_fingerprint.sh
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('vendor-uwu/patches/enchilada/hdr/tools/op6_hwc_fingerprint.sh').read_text()
+          assert '#!/system/bin/sh' in source
+          assert 'vendor.qti.hardware.display.composer-service' in source
+          assert 'sha256sum' in source
+          for forbidden in ('setprop ', 'settings put ', 'wm density ', 'insmod ',
+                            'modprobe ', 'mount -o ', 'dd if=', 'reboot', 'fastboot flash'):
+              assert forbidden not in source, forbidden
+          print('Read-only script syntax and mutation guards passed')
+          PY
