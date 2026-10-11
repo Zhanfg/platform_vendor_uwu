@@ -83,7 +83,9 @@ for name in SystemUI.apk Settings.apk Launcher3QuickStep.apk uwuSettingsExt.apk;
     count=$((count + 1))
     echo "INCLUDED: $component"
 done
-[ "$count" -gt 0 ] || { echo 'No modified APK; no hotfix package generated' >&2; exit 6; }
+# This v0.6 is a coherent four-component MD3E/SystemUI release.
+# It must not silently ship a partial Settings-only or SystemUI-only zip.
+[ "$count" -eq 4 ] || { echo "Incomplete MD3E build: expected all 4 signed changed APKs, got $count" >&2; exit 6; }
 # One ZIP, no duplicate payload storage. Atomic replacement on host.
 TMPZIP="$OUT/.uwuAOSP-hotfix-v0.6.$.zip"
 trap 'rm -rf "$WORK"; rm -f "$TMPZIP"' EXIT HUP INT TERM
