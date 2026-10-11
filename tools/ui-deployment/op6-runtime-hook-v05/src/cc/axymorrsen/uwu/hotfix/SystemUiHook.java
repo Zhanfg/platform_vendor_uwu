@@ -52,7 +52,7 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
     private static final ThreadLocal<Boolean> IN_TOUCH = new ThreadLocal<>();
     private static final Map<View, Boolean> HANDLE_VIEWS =
             Collections.synchronizedMap(new WeakHashMap<>());
-    private static volatile boolean HIDE_HANDLE;
+    private static volatile boolean HIDE_HANDLE = true;
     private static volatile boolean HANDLE_OBSERVER_STARTED;
     private static final Map<Class<?>, Boolean> TICK_HOOKS =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -101,8 +101,12 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
                 final ContentObserver watcher = new ContentObserver(MAIN) {
                     @Override public void onChange(boolean selfChange) {
                         try {
+                            // Independent from v0.1–v0.3's legacy flag:
+                            // older hotfix uninstalls may have restored that to
+                            // zero, although the user still wants the bar hidden.
+                            // Default hidden; explicit 0 opt-out remains possible.
                             HIDE_HANDLE = Settings.Secure.getInt(
-                                    resolver, "uwu_hide_gesture_handle", 0) == 1;
+                                    resolver, "uwu_hotfix_hide_pill", 1) == 1;
                             synchronized (HANDLE_VIEWS) {
                                 for (View tracked : HANDLE_VIEWS.keySet()) {
                                     if (tracked != null) tracked.postInvalidate();
@@ -116,7 +120,7 @@ public final class SystemUiHook implements IXposedHookLoadPackage {
                 };
                 watcher.onChange(false);
                 resolver.registerContentObserver(Settings.Secure.getUriFor(
-                        "uwu_hide_gesture_handle"), false, watcher);
+                        "uwu_hotfix_hide_pill"), false, watcher);
             } catch (Throwable e) {
                 HIDE_HANDLE = false; // fail open to the stock renderer
                 log("Could not observe gesture handle preference", e);
