@@ -1,0 +1,6 @@
+id=uwu-ui-live-hotfix
+name=uwuAOSP 17 - OP6 UI Live Hotfix
+version=0.1.0
+versionCode=10
+author=Axymorrsen / uwuAOSP adaptation
+description=OnePlus 6 Android 17: show status bar seconds, request hide gesture hint; no system APK replacement, low RAM, OTA friendly.
