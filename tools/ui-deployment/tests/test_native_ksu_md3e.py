@@ -43,7 +43,9 @@ class NativeHotfixContract(unittest.TestCase):
         self.assertIn("420",LOCK)
 
     def test_installed_rom_guard_at_boot(self):
-        self.assertIn("CP2A.260605.016",GUARD)
+        self.assertIn("CP2A.260605.016",SERVICE)
+        self.assertIn('getprop ro.build.id',GUARD)
+        self.assertIn('expected_id',GUARD)
         self.assertIn("Mountify",GUARD)
         self.assertIn("sha256sum",GUARD)
         self.assertIn('block ',GUARD)
