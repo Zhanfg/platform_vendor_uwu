@@ -1,0 +1,27 @@
+name: OP6 Settings Feature Parity Audit QA
+on:
+  push:
+    branches: ["audit/**"]
+    paths:
+      - "tools/op6-settings/**"
+      - ".github/workflows/op6-settings-audit-qa.yml"
+  pull_request:
+    paths:
+      - "tools/op6-settings/**"
+      - ".github/workflows/op6-settings-audit-qa.yml"
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/op6-settings
+          sparse-checkout-cone-mode: true
+      - run: |
+          sh -n tools/op6-settings/feature_probe.sh
+          python3 -m unittest discover -s tools/op6-settings -p test_feature_probe.py -v
