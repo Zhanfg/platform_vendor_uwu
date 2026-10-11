@@ -1,0 +1,45 @@
+name: uwuAOSP hotfix v0.3 verification
+
+on:
+  push:
+    branches: ["fix/op6-hotfix-v03-dpi-gesture-stability"]
+    paths:
+      - "tools/ui-deployment/op6-hotfix-v03/**"
+      - ".github/workflows/uwu-hotfix-v03-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/op6-hotfix-v03/**"
+      - ".github/workflows/uwu-hotfix-v03-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/op6-hotfix-v03
+          sparse-checkout-cone-mode: true
+      - name: Parse all POSIX scripts
+        run: |
+          for f in tools/ui-deployment/op6-hotfix-v03/*.sh; do sh -n "$f"; done
+      - name: Verify rollback, density and safety logic
+        run: python3 -m unittest discover -s tools/ui-deployment/op6-hotfix-v03/tests -p 'test_ci_core.py' -v
+      - name: Rebuild one ZIP and verify contents
+        run: |
+          sh tools/ui-deployment/op6-hotfix-v03/package.sh
+          unzip -t "tools/ui-deployment/op6-hotfix-v03/out/uwuAOSP hotfix v0.3.zip"
+          if unzip -Z1 "tools/ui-deployment/op6-hotfix-v03/out/uwuAOSP hotfix v0.3.zip" | grep '^system/'; then
+            echo "System APK payload unexpectedly present"; exit 1
+          fi
+      - name: Upload tested ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: uwuAOSP-hotfix-v0.3
+          path: tools/ui-deployment/op6-hotfix-v03/out/uwuAOSP hotfix v0.3.zip
+          if-no-files-found: error
