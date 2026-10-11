@@ -60,3 +60,14 @@ ThemePicker source=Zhanfg/platform_packages_apps_ThemePicker@0859e053a7de17180b4
   ThemePicker + uwuPrism signed by a distinct original certificate from SystemUI/framework-res
   included as fifth required APK only when actual rebuilt APK matches original cert
 SystemUI QS details=source PR8 adds localized TalkBack back/open Settings strings
+
+Common MD3E Switch off-state fix (Android 17 Compose):
+uwu-sdk patch=tools/ui-deployment/patches/uwu-sdk-md3e-switch-contrast.patch
+  SettingsSwitch.kt: use MaterialTheme dynamic onSurfaceVariant thumb and
+  surfaceContainerHighest off/disabled-off track border; avoids bright
+  unchecked outline even when Monet wallpaper palette changes.
+  Covers MainSwitchPreference, SwitchPreferenceRow and PrimarySwitchPreferenceRow.
+  Patch is applied by prepare_native_sources.sh only to pinned uwu-sdk SHA;
+  no LSP hook, no direct runtime apk mutation, no SystemUI restart.
+  GitHub pinned-upstream apply/check and 4 source QA tests pass.
+  Full Android 17 native compilation and matching original APK signing pending.
