@@ -53,3 +53,33 @@
 2. 在配套 Android 17 编译环境中编译 Vendor Composer，比较 ELF 动态依赖、入口、服务 rc、SELinux 标签及原机运行接口。
 3. 先完成原机可回退机制验证，再考虑 KernelSU/Magisk systemless 挂载新 Vendor 用户空间服务；**无需 BOOT / DTBO / LKM**。
 4. 真机分别检查色彩映射表、普通 SDR 色准和 HWC HDR 输出模式；随后按原有亮度曲线实现有验证依据的 HDR/SDR 亮度控制。不能用伪造 HDR 元数据替代以上步骤。
+
+
+## 2026-10-11 官方构建源锁定与自动门禁
+
+从 uwuAOSP 官方 manifest (https://github.com/uwuAOSP/platform_manifests/blob/uwu-17.0/snippets/lineage.xml) 确定：
+- 源码路径：hardware/qcom/sm7250/display
+- 项目：LineageOS/android_hardware_qcom_sm7250_display
+- 上游分支：lineage-24.0
+- 当前复现固定 SHA：d3fae6913731a30c135a6cd1fab803913da06998
+- Soong 目标：vendor.qti.hardware.display.composer-service
+
+这是官方 ROM 清单的真实来源，但并不证明本机 101 ROM 使用了完全相同的提交。
+
+### 新增自动化检查
+- test_real_populate_color_modes.py：提取补丁后的真实 HWCColorMode::PopulateColorModes() 函数，在模拟底层 DisplayInterface 上编译并执行；验证 CTS、SRGB、DCI_P3、PQ、HLG 的映射及特殊预设的拒绝，验证 native fallback。
+- tools/prepare_op6_hdr_hwc_build.sh：完整 Android 17 ROM 构建树中运行（无参数）。强制验证 enchilada 目标、上游来源及固定 SHA、Git 工作区干净、补丁可应用；仅修改本地源码。
+- tools/verify_composer_abi.py：编译后的主机工具。对比原始 Composer 与候选 ELF 的 ARM64、动态库 DT_NEEDED 列表、Build ID 和补丁标记。发现差异自动拒绝。
+
+### 实际编译流程（在完整 ROM 构建机，不是在手机）
+1. 同步 uwuAOSP 17.0 清单，导入正在使用的 enchilada device/vendor 配置。
+2. source build/envsetup.sh，然后选择该 ROM 已有的 enchilada lunch target。
+3. 把 vendor/uwu 切换到 PR #9 分支，在构建树中运行：
+   sh vendor/uwu/patches/enchilada/hdr/tools/prepare_op6_hdr_hwc_build.sh
+4. 编译：m vendor.qti.hardware.display.composer-service
+5. 在构建机上运行：
+   python3 vendor/uwu/patches/enchilada/hdr/tools/verify_composer_abi.py 原始Composer文件 新Composer文件
+6. 通过后仍须完成 VINTF/SELinux、真实启动和可回退部署测试。
+
+### 当前验收边界
+CI 通过了真实 HWC 函数的主机编译执行、官方 manifest 核对、固定源码提交的补丁应用、候选 ELF ABI 工具静态检查。但尚未完成整套 Android 17 Soong 编译、可刷模块生成和真机 HDR 验证。保留 Draft。
