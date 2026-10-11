@@ -17,7 +17,9 @@ class RuntimeFixContract(unittest.TestCase):
         )
     def test_pill_only_skip_paint(self):
         self.assertIn('QuickswitchOrientedNavHandle', SRC)
-        self.assertIn('uwu_hide_gesture_handle', SRC)
+        self.assertIn('uwu_hotfix_hide_pill', SRC)
+        self.assertIn('resolver, "uwu_hotfix_hide_pill", 1)', SRC)
+        self.assertNotIn('resolver, "uwu_hide_gesture_handle"', SRC)
         self.assertIn('param.setResult(null);', SRC)
         self.assertNotIn('setVisibility(View.GONE)', SRC)
         self.assertNotIn('wm density', SRC)
