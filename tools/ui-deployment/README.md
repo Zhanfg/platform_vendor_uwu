@@ -115,9 +115,10 @@ host-side no-argument packager creates exactly one compressed file:
 the installed ROM are omitted entirely. No backup APK or second copy of
 the original ROM is included in the module.
 
-Use KernelSU manager's **Action** script (or run the installed
-`action.sh` via a root shell, without arguments) to display four
-components and toggle one at a time. The toggle uses a same-filesystem
+Run the installed `action.sh` in an **interactive root shell with no
+arguments** to display four components and toggle one at a time. In a
+KernelSU manager Action interface that does not supply interactive stdin,
+the same script displays current status without applying a toggle. The toggle uses a same-filesystem
 rename between `system/...` and `inactive/system/...`; only the
 active `system/` subtree is copied into Mountify TMPFS. This operation
 changes **next boot** only and never edits the ROM partition. It does not
