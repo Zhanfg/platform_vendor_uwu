@@ -23,7 +23,7 @@ class NativeHotfixContract(unittest.TestCase):
         self.assertNotIn("XposedHelpers",PKG)
 
     def test_all_five_signed_apps_required_no_partial_zip(self):
-        self.assertIn('count" -eq 4',PKG)
+        self.assertIn('count" -eq 5',PKG)
         self.assertIn('sh "$ROOT/verify_apk_signatures.sh"',PKG)
         self.assertIn("BLOCKED signer mismatch",VERIFY)
         self.assertIn("apksigner verify --print-certs",VERIFY)
