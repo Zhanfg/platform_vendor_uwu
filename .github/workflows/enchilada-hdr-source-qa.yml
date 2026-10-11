@@ -1,0 +1,50 @@
+name: OnePlus 6 HDR HWC Source QA
+
+on:
+  push:
+    branches: [fix/enchilada-hdr-legacy-render-intent]
+    paths:
+      - 'patches/enchilada/hdr/**'
+      - '.github/workflows/enchilada-hdr-source-qa.yml'
+  pull_request:
+    paths:
+      - 'patches/enchilada/hdr/**'
+      - '.github/workflows/enchilada-hdr-source-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reference-apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: vendor-uwu
+      - uses: actions/checkout@v4
+        with:
+          repository: LineageOS/android_hardware_qcom_sm7250_display
+          ref: lineage-24.0
+          path: reference-hwc
+      - name: Verify patch applies to the reference source
+        run: |
+          cd reference-hwc
+          git apply --check "../vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch"
+          git apply "../vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch"
+          grep -q 'Legacy color mode' composer/hwc_display.cpp
+      - name: Check narrow legacy compatibility conditions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('vendor-uwu/patches/enchilada/hdr/0001-legacy-hdr-render-intent.patch').read_text()
+          required = ('int_render_intent == -1', 'pic_quality == kStandard',
+                      'kBt2020', 'kSt2084', 'kHlg', 'RenderIntent::COLORIMETRIC')
+          for fragment in required:
+              assert fragment in text, fragment
+          banned = ('ro.surface_flinger.has_HDR_display=true', 'setprop ',
+                    'wm density ', 'qcom,mdss-dsi-bpp')
+          for fragment in banned:
+              assert fragment not in text, fragment
+          print('Source patch constraints OK (no binary compilation or device validation)')
+          PY
