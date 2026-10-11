@@ -1,0 +1,52 @@
+diff --git a/uwuCompose/Android.bp b/uwuCompose/Android.bp
+--- a/uwuCompose/Android.bp
++++ b/uwuCompose/Android.bp
+@@ -17,7 +17,8 @@ android_library {
+     name: "uwuComposeSettingsLib",
+ 
+     srcs: ["src/**/*.kt"],
++    resource_dirs: ["res"],
+     manifest: "AndroidManifest.xml",
+     sdk_version: "current",
+     min_sdk_version: "26",
+diff --git a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsToolbar.kt b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsToolbar.kt
+--- a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsToolbar.kt
++++ b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsToolbar.kt
+@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.SolidColor
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.graphics.vector.addPathNodes
++import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.Dp
+ import androidx.compose.ui.unit.dp
+@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
++import org.uwuaosp.compose.R
+ 
+ private val ExpressiveBackIcon = ImageVector.Builder(
+@@ -153,7 +155,7 @@
+         if (showBackButton) {
+             SettingsToolbarActionButton(
+                 imageVector = ExpressiveBackIcon,
+-                contentDescription = null,
++                contentDescription = stringResource(R.string.uwu_settings_navigate_up),
+                 onClick = onNavigateUp,
+                 modifier = Modifier
+                     .align(Alignment.TopStart)
+diff --git a/uwuCompose/res/values/strings.xml b/uwuCompose/res/values/strings.xml
+new file mode 100644
+--- /dev/null
++++ b/uwuCompose/res/values/strings.xml
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="uwu_settings_navigate_up">Navigate up</string>
++</resources>
+diff --git a/uwuCompose/res/values-zh-rCN/strings.xml b/uwuCompose/res/values-zh-rCN/strings.xml
+new file mode 100644
+--- /dev/null
++++ b/uwuCompose/res/values-zh-rCN/strings.xml
+@@ -0,0 +1,4 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="uwu_settings_navigate_up">向上返回</string>
++</resources>
