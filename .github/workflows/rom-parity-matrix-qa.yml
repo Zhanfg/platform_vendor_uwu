@@ -1,0 +1,26 @@
+name: ROM Feature Parity Matrix QA
+
+on:
+  push:
+    branches: ["audit/**"]
+    paths:
+      - "tools/ui-parity/**"
+      - ".github/workflows/rom-parity-matrix-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-parity/**"
+      - ".github/workflows/rom-parity-matrix-qa.yml"
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-parity
+          sparse-checkout-cone-mode: true
+      - run: python3 -m unittest discover -s tools/ui-parity -p test_parity_matrix.py -v
