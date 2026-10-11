@@ -59,6 +59,15 @@ jobs:
           for bad in ('flash boot', 'flash dtbo', 'insmod ', 'setprop ', 'settings put '):
               assert bad not in s, bad
           PY
+      - name: Compile-check postbuild AArch64 ABI validator
+        run: |
+          python3 -m py_compile vendor-uwu/patches/enchilada/hdr/tools/verify_composer_abi.py
+          if python3 vendor-uwu/patches/enchilada/hdr/tools/verify_composer_abi.py /bin/ls /bin/ls \
+              >abi-guard-test.log 2>&1; then
+            echo "ABI validator failed to reject x86_64 binary" >&2
+            exit 1
+          fi
+          grep -q "expected ELF64 little-endian AArch64" abi-guard-test.log
       - name: Verify patch applies to the reference source
         run: |
           cd reference-hwc
