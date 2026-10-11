@@ -47,6 +47,20 @@ else
   echo 'Applied: MD3E Switch off-state dynamic palette'
 fi
 
+# Shared MD3E search and dialog inputs: consistent dynamic tonal fill, a
+# visible primary focus outline, and a low-contrast unfocused border.
+# Keep the underlying layout and input geometry stable at 420 dpi.
+INPUT_PATCH="$SRC/patches/uwu-sdk-md3e-input-tonal-focus.patch"
+[ -r "$INPUT_PATCH" ] || { echo 'Missing MD3E input component patch' >&2; exit 2; }
+if git -C "$ANDROID_ROOT/uwu-sdk" apply --reverse --check "$INPUT_PATCH" 2>/dev/null; then
+  echo 'Already patched: MD3E shared input dynamic focus'
+else
+  git -C "$ANDROID_ROOT/uwu-sdk" apply --check "$INPUT_PATCH" ||
+    { echo 'Wrong uwu-sdk source or conflicting input styling' >&2; exit 4; }
+  git -C "$ANDROID_ROOT/uwu-sdk" apply "$INPUT_PATCH"
+  echo 'Applied: MD3E shared search/dialog input focus treatment'
+fi
+
 # ThemePicker/uwuPrism are a second signing domain. The original files
 # were found and hashed in the user-provided ROM101 reference archive, so
 # ThemePicker must now be built at the pinned MD3E accessibility revision.
