@@ -27,7 +27,8 @@ while IFS='|' read -r origin expected; do
     /system/system_ext/priv-app/SystemUI/SystemUI.apk|\
     /system/system_ext/priv-app/Settings/Settings.apk|\
     /system/system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk|\
-    /system/system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk) : ;;
+    /system/system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk|\
+    /system/system_ext/priv-app/ThemePicker/ThemePicker.apk) : ;;
     *) log 'PAUSED: unexpected mount target'; exit 0 ;;
   esac
   case "$expected" in ''|*[!0-9a-f]*) log 'PAUSED: bad digest'; exit 0;; esac
