@@ -1,7 +1,7 @@
 diff --git a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
 --- a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
 +++ b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
-@@ -226,20 +226,21 @@ private fun SettingsSwitch(
+@@ -226,20 +226,24 @@ private fun SettingsSwitch(
      val primary = MaterialTheme.colorScheme.primary
      val onPrimary = MaterialTheme.colorScheme.onPrimary
      val surfaceHighest = MaterialTheme.colorScheme.surfaceContainerHighest
