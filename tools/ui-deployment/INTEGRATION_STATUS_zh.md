@@ -15,7 +15,7 @@
 
 | 组件 | 编译分支与 SHA | 合并来源 | 实质修改 | 独立构建/真机 |
 |---|---|---|---|---|
-| SystemUI | `Zhanfg/platform_frameworks_base@ccaa206b36db45ed6add3eec3e2b4812f31b00c0` | PR #1,#2,#3,#4,#7 → 统一 PR #8 | Moment Arc 的同步 LauncherApps IPC、窗口超时、秒针 Handler 生命周期、白条绘制判断、双面板调用宽度/顶部安全区/刘海提示 | 待验证 |
+| SystemUI | `Zhanfg/platform_frameworks_base@5f78233070530b853fcc6501776f19d00393ca63` | PR #1,#2,#3,#4,#7 → 统一 PR #8 | Moment Arc 的同步 LauncherApps IPC、窗口超时、秒针 Handler 生命周期、白条绘制判断、双面板调用宽度/顶部安全区/刘海提示 | 待验证 |
 | Settings | `Zhanfg/platform_packages_apps_Settings@c3cfe7b63318bb17f6e8e542f4a7e33e1b38f94d` | PR #1–3 → 统一 PR #4 | MD3E 首页动效、原生存储/内存设置、真实 HDR/刷新率能力展示 | 待验证 |
 | Launcher3 | `Zhanfg/platform_packages_apps_Launcher3@601c7068193663506e154f1333f7dcc070f7fb49` | PR #1–3 → 统一 PR #4 | 弹窗进入抽屉、设置页过渡、动态色提示组件 | 待验证 |
 | uwuSettingsExt | `Zhanfg/platform_packages_apps_uwuSettingsExt@289a20b44e68ce8b3836335b32793bbfd243213c` | PR #1–2 → 统一 PR #3 | 响应式 Header/手势提示条开关状态同步 | 待验证 |
