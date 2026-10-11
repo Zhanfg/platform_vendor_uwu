@@ -1,53 +1,35 @@
 #!/system/bin/sh
-# Optional KernelSU "Action" panel / no-argument terminal menu.
-# Moves an APK between enabled system/ and disabled inactive/system/,
-# without duplicating file bytes. Changes apply on the NEXT reboot.
+# Read-only KernelSU Action: one atomic, coherent four-component UI release.
+# Use the KernelSU Manager module enable/disable control to roll back ALL
+# components together. Never mix half-old SystemUI with half-new Settings.
 MODDIR=${0%/*}
-[ -d "$MODDIR" ] || { echo "Cannot locate module"; exit 1; }
-[ -f "$MODDIR/base-apks.sha256" ] || { echo "Missing component manifest"; exit 1; }
-show_one() {
-    label="$1"
-    target="$2"
-    enabled="$MODDIR/system/$target"
-    parked="$MODDIR/inactive/system/$target"
-    if [ -f "$enabled" ]; then
-        state=ON
-    elif [ -f "$parked" ]; then
-        state=OFF
-    else
-        state=NOT_INCLUDED
-    fi
-    printf '%-16s %s\n' "$label" "$state"
-}
-echo "uwuAOSP UI Hotfix component manager"
-[ -e "$MODDIR/skip_mount" ] && echo "OTA GUARD: PAUSED; component toggles cannot override this lock"
-show_one SystemUI system_ext/priv-app/SystemUI/SystemUI.apk
-show_one Settings system_ext/priv-app/Settings/Settings.apk
-show_one Launcher3 system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk
-show_one uwuSettingsExt system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk
-echo "Choose a component to toggle: 1=SystemUI 2=Settings 3=Launcher3 4=uwuSettingsExt 0=cancel"
-IFS= read -r choice || exit 0
-case "$choice" in
-  1) target=system_ext/priv-app/SystemUI/SystemUI.apk ;;
-  2) target=system_ext/priv-app/Settings/Settings.apk ;;
-  3) target=system_ext/priv-app/Launcher3QuickStep/Launcher3QuickStep.apk ;;
-  4) target=system_ext/priv-app/uwuSettingsExt/uwuSettingsExt.apk ;;
-  0|"") exit 0 ;;
-  *) echo "Invalid choice"; exit 1 ;;
-esac
-grep -Fqx "/system/$target|$(sed -n "s@^/system/$target|@@p" "$MODDIR/base-apks.sha256")" "$MODDIR/base-apks.sha256" ||
-    { echo "Component not included in this package"; exit 1; }
-on="$MODDIR/system/$target"
-off="$MODDIR/inactive/system/$target"
-if [ -f "$on" ]; then
-    mkdir -p "$(dirname "$off")" || exit 1
-    mv "$on" "$off" || exit 1
-    echo "Component DISABLED for next boot. APK moved, not duplicated."
-elif [ -f "$off" ]; then
-    mkdir -p "$(dirname "$on")" || exit 1
-    mv "$off" "$on" || exit 1
-    echo "Component ENABLED for next boot, subject to compatibility guard."
-else
-    echo "No staged APK found"; exit 1
+echo 'uwuAOSP hotfix v0.6 — native MD3E/SystemUI'
+echo 'Mountify TMPFS / KernelSU; no LSPosed hooks.'
+echo
+[ -r "$MODDIR/module.prop" ] || { echo 'Module metadata missing'; exit 1; }
+[ ! -e "$MODDIR/skip_mount" ] || echo 'OTA GUARD: PAUSED (not mounted)'
+[ ! -e "$MODDIR/disable" ] || echo 'Module disabled'
+if [ -r "$MODDIR/last_guard_status.txt" ]; then
+  echo 'Before-mount gate:'
+  cat "$MODDIR/last_guard_status.txt"
 fi
-echo "Reboot required. ROM slots and original system files are untouched."
+if [ -r "$MODDIR/last_runtime_status.txt" ]; then
+  echo 'Live payload / UI status:'
+  cat "$MODDIR/last_runtime_status.txt"
+fi
+echo
+for f in SystemUI Settings Launcher3QuickStep uwuSettingsExt; do
+  case "$f" in
+    Launcher3QuickStep) dest=Launcher3QuickStep/Launcher3QuickStep.apk ;;
+    *) dest="$f/$f.apk" ;;
+  esac
+  if [ -r "$MODDIR/system/system_ext/priv-app/$dest" ]; then
+    echo "$f: staged"
+  else
+    echo "$f: missing (incomplete build!)"
+  fi
+done
+echo
+echo 'To disable ALL changes, toggle this single module in KernelSU Manager.'
+echo 'Never toggle individual APKs; preserve cross-component MD3E consistency.'
+exit 0
