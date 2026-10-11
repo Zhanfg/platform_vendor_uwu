@@ -57,3 +57,9 @@
 6. OTA 或原 APK Hash 变化自动停止挂载；可从 KSU 安全模式禁用唯一模块恢复原 ROM。
 
 当前结论：**源码集成/打包流程推进成功，但还没有足够证据交付“已修好 SystemUI 的可刷 APK 热更新包”。**
+
+## 补充：MD3E 公共 Switch 关闭态配色（2026-10-11）
+
+源头已定位于 `uwu-sdk/uwuCompose/.../SettingsSwitch.kt`：关闭状态默认 `uncheckedBorderColor = colorScheme.outline`，在某些动态壁纸色系、暗色模式下呈现过亮描边。此轮新增 `patches/uwu-sdk-md3e-switch-contrast.patch`，将关闭态边框与 `surfaceContainerHighest` 轨道保持同一色阶，拇指采用 `onSurfaceVariant`，禁用态也避免亮边。公共组件可同时覆盖 Settings、uwuSettingsExt、Prism 等实际使用它的页面，无需逐页 LSP Hook。
+
+该源码补丁在固定 `uwu-sdk` SHA 上通过 `git apply --check` 和 CI 静态测试，纳入 `prepare_native_sources.sh`；**尚未编译进已安装 ROM/可刷模块**。MD3E 其它区域（QS Compose、通知、锁屏、动态色完整色阶）仍需继续适配和真机压力测试。

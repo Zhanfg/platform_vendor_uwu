@@ -26,7 +26,7 @@ class NativeHotfixContract(unittest.TestCase):
         self.assertIn('count" -eq 5',PKG)
         self.assertIn('sh "$ROOT/verify_apk_signatures.sh"',PKG)
         self.assertIn("BLOCKED signer mismatch",VERIFY)
-        self.assertIn("apksigner verify --print-certs",VERIFY)
+        self.assertIn("apksigner verify --min-sdk-version 37 --print-certs",VERIFY)
         for f in ("SystemUI.apk","Settings.apk","Launcher3QuickStep.apk","uwuSettingsExt.apk","ThemePicker.apk"):
             self.assertIn(f,PKG)
         self.assertIn("payload-apks.sha256",PKG)

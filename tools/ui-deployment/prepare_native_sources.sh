@@ -32,6 +32,21 @@ else
   git -C "$ANDROID_ROOT/uwu-sdk" apply "$PATCH"
   echo 'Applied: uwuCompose navigate-up native accessibility patch'
 fi
+# Shared Material 3 Expressive Switch palette: use onSurfaceVariant for
+# legible off-state thumbs and the same tonal track color for its border.
+# This patches the common Compose component, not dozens of individual
+# Settings/Prism screens; it does not add LSP hooks or runtime listeners.
+SWITCH_PATCH="$SRC/patches/uwu-sdk-md3e-switch-contrast.patch"
+[ -r "$SWITCH_PATCH" ] || { echo 'Missing MD3E switch patch' >&2; exit 2; }
+if git -C "$ANDROID_ROOT/uwu-sdk" apply --reverse --check "$SWITCH_PATCH" 2>/dev/null; then
+  echo 'Already patched: MD3E Switch off-state dynamic palette'
+else
+  git -C "$ANDROID_ROOT/uwu-sdk" apply --check "$SWITCH_PATCH" ||
+    { echo 'Wrong uwu-sdk source or conflicting Switch styles' >&2; exit 4; }
+  git -C "$ANDROID_ROOT/uwu-sdk" apply "$SWITCH_PATCH"
+  echo 'Applied: MD3E Switch off-state dynamic palette'
+fi
+
 # ThemePicker/uwuPrism are a second signing domain. The original files
 # were found and hashed in the user-provided ROM101 reference archive, so
 # ThemePicker must now be built at the pinned MD3E accessibility revision.

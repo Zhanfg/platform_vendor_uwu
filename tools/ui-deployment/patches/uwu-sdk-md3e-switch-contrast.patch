@@ -1,0 +1,31 @@
+diff --git a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
+--- a/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
++++ b/uwuCompose/src/org/uwuaosp/compose/settingslib/SettingsSwitch.kt
+@@ -226,20 +226,24 @@ private fun SettingsSwitch(
+     val primary = MaterialTheme.colorScheme.primary
+     val onPrimary = MaterialTheme.colorScheme.onPrimary
+     val surfaceHighest = MaterialTheme.colorScheme.surfaceContainerHighest
+-    val outline = MaterialTheme.colorScheme.outline
++    // Keep disabled/off track edges within their own tonal surface. The
++    // default outline is much brighter than the track in some wallpaper
++    // palettes and becomes a glaring ring on Settings switch rows.
++    val offThumb = MaterialTheme.colorScheme.onSurfaceVariant
+ 
+     Switch(
+         checked = checked,
+         onCheckedChange = onCheckedChange,
+         enabled = enabled,
+         modifier = modifier,
+         colors = SwitchDefaults.colors(
+             checkedThumbColor = onPrimary,
+             checkedTrackColor = primary,
+             checkedBorderColor = primary,
+-            uncheckedThumbColor = outline,
++            uncheckedThumbColor = offThumb,
+             uncheckedTrackColor = surfaceHighest,
+-            uncheckedBorderColor = outline,
++            uncheckedBorderColor = surfaceHighest,
++            disabledUncheckedBorderColor = surfaceHighest,
+             checkedIconColor = primary,
+             uncheckedIconColor = surfaceHighest,
+         ),
