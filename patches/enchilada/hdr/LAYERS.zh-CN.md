@@ -47,3 +47,10 @@ KernelSU 可以以 LKM 方式工作，但 KernelSU 模块对用户空间文件�
   然后验证 HDR 图层 `current dynamic_range: HDR`、Dataspace 与光度表现。
 - 再验证亮度保护、待机功耗、热限制、横竖屏切换、关屏唤醒。
 - 未完成实际设备测试前，PR 保持 Draft，任何产物均不能标记为可刷入正式版。
+
+## 2026-10-11 HAL 指纹结果与补丁收紧
+- Qualcomm composer 可执行文件为 `/vendor/bin/hw/vendor.qti.hardware.display.composer-service`，运行正常；显示依赖库均已取得 SHA-256 指纹，仍需验证实际 ELF 和源码对应关系。
+- 与 OnePlus 6 对应的 `qdcm_calib_data_samsung_sofef00_m_cmd_mode_dsi_panel.xml` 已存在。仓库里同时有 `s6e3fc2x01` 配置，那是其他面板，不能混用。
+- 现有旧校准文件把 `advance_*` 预设也报告为 sRGB；源码 patch 现在只对 `CTS`、`SRGB`、`DCI_P3`、`bt2020_pq`、`bt2020_hlg` 五个模式进行精确匹配，不触碰增强预设。
+- `ro.vendor.build.security_patch=2021-11-01` 反映当前 Vendor 安全补丁声明，**不能据此推断 Composer 编译日期或代码提交**。
+- CI 增加 C++ 映射条件正反测试，但整套 Android HAL 尚未编译、未真机刷入。
