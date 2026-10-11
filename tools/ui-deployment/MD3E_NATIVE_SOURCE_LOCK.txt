@@ -7,7 +7,7 @@ module_id=uwu-ui-live-hotfix
 backend=KernelSU + Mountify TMPFS/OverlayFS
 runtime_hooks=none
 merged_Source_20261011:
-frameworks/base=Zhanfg/platform_frameworks_base@ccaa206b36db45ed6add3eec3e2b4812f31b00c0 (PR 8)
+frameworks/base=Zhanfg/platform_frameworks_base@5f78233070530b853fcc6501776f19d00393ca63 (PR 8)
 Settings=Zhanfg/platform_packages_apps_Settings@c3cfe7b63318bb17f6e8e542f4a7e33e1b38f94d (PR 4)
 Launcher3=Zhanfg/platform_packages_apps_Launcher3@601c7068193663506e154f1333f7dcc070f7fb49 (PR 4)
 uwuSettingsExt=Zhanfg/platform_packages_apps_uwuSettingsExt@289a20b44e68ce8b3836335b32793bbfd243213c (PR 3)
@@ -45,3 +45,13 @@ Signing:
   signer has not been established. Never bypass Android platform signature
   verification or spoof the platform certificate. If absent, package script
   must refuse to generate any flashable APK replacement ZIP.
+
+Extra native MD3E gaps located by the fixed ROM101 audit:
+uwu-sdk original upstream=uwuAOSP/platform_uwu-sdk@75c696d97527dfbf5fd89471ae6ea1a13aeee4fd
+uwu-sdk patch=tools/ui-deployment/patches/uwu-sdk-md3e-a11y.patch
+  fixes SettingsToolbar Navigate-up TalkBack description (zh-CN/en)
+  git apply tested against pinned upstream; not an LSPosed hook
+ThemePicker source=Zhanfg/platform_packages_apps_ThemePicker@0859e053a7de17180b4e8168705732b46515b787 (PR 1)
+  localizes freeform color palette contentDescription
+  NOT included in 4-APK release until installed ThemePicker signer/path verified
+SystemUI QS details=source PR8 adds localized TalkBack back/open Settings strings
