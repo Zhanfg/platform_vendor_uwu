@@ -14,6 +14,29 @@ block() {
     exit 0
 }
 
+# Mountify TMPFS uses a real KernelSU metamodule handler with an
+# OverlayFS mount backed by tmpfs. In fallback non-metamodule mode its
+# skip_mount behaviour differs: do not depend on it for OTA protection.
+# Require the verified metamount mode before allowing file replacements.
+data_root="${UWU_GUARD_TEST_ROOT:-}"
+mountify_dir="$data_root/data/adb/modules/mountify"
+mountify_config="$data_root/data/adb/mountify/config.sh"
+mountify_list="$data_root/data/adb/mountify/modules.txt"
+[ -f "$mountify_dir/metamount.sh" ] || block 'Mountify metamodule handler not found'
+[ ! -e "$mountify_dir/disable" ] || block 'Mountify disabled'
+[ -r "$mountify_config" ] || block 'Mountify configuration unavailable'
+mode=$(sed -n 's/^mountify_mounts=[[:space:]]*//p' "$mountify_config" | tail -n 1)
+case "$mode" in
+    2) : ;; # auto: Mountify takes every active module containing system/
+    1) # manual: this module must be allowlisted by name
+        [ -r "$mountify_list" ] || block 'Mountify manual list missing'
+        module_id=$(sed -n 's/^id=//p' "$MODDIR/module.prop" | head -n 1)
+        [ -n "$module_id" ] || block 'missing module ID'
+        grep -Fxq "$module_id" "$mountify_list" || block 'Mountify manual list excludes this module'
+        ;;
+    *) block 'Mountify not in supported auto/manual mode' ;;
+esac
+
 [ -r "$CONFIG" ] && [ -s "$BASES" ] || block 'missing manifest'
 read_prop() { sed -n "s/^$1=//p" "$CONFIG" | head -n 1; }
 expected_device=$(read_prop device)
