@@ -21,6 +21,7 @@ done
 # If Mountify failed to mount, old APK hashes won't match this manifest.
 sysui_ok=0
 count=0
+seen='|'
 while IFS='|' read -r origin expected; do
   [ -n "$origin" ] || continue
   case "$origin" in
@@ -33,13 +34,22 @@ while IFS='|' read -r origin expected; do
   esac
   case "$expected" in ''|*[!0-9a-f]*) log 'PAUSED: bad digest'; exit 0;; esac
   [ "${#expected}" -eq 64 ] || { log 'PAUSED: digest size'; exit 0; }
+  case "$seen" in
+    *"|$origin|"*) log 'PAUSED: duplicate payload target'; exit 0 ;;
+  esac
+  seen="$seen$origin|"
   [ -r "$origin" ] || { log 'PAUSED: APK not visible'; exit 0; }
   actual=$(sha256sum "$origin" 2>/dev/null | cut -d' ' -f1)
   [ "$actual" = "$expected" ] || { log "PAUSED: module payload not visible at $origin"; exit 0; }
   [ "$origin" != /system/system_ext/priv-app/SystemUI/SystemUI.apk ] || sysui_ok=1
   count=$((count+1))
 done < "$MANIFEST"
-[ "$count" -gt 0 ] || { log 'PAUSED: no APK mounted'; exit 0; }
+# Runtime state can only be activated after the ENTIRE five-component
+# MD3E replacement is visible. A partly mounted mixed-version SystemUI,
+# Settings and Launcher must never be reported as a valid release.
+[ "$count" -eq 5 ] && [ "$sysui_ok" = 1 ] || {
+  log 'PAUSED: incomplete five-component native mount'; exit 0;
+}
 umask 077
 mkdir -p "$ROOT" || exit 0
 chmod 0700 "$ROOT" 2>/dev/null || :
