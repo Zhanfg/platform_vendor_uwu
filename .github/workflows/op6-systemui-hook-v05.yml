@@ -1,0 +1,60 @@
+name: OP6 SystemUI Runtime Hook Compile QA
+on:
+  push:
+    branches: ["feat/op6-systemui-runtime-fix-v05"]
+    paths:
+      - "tools/ui-deployment/op6-runtime-hook-v05/**"
+      - ".github/workflows/op6-systemui-hook-v05.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/op6-runtime-hook-v05/**"
+      - ".github/workflows/op6-systemui-hook-v05.yml"
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/op6-runtime-hook-v05
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK from hosted runner
+        shell: bash
+        run: |
+          set -e
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          MANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$MANAGER" ]; then
+            MANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          fi
+          [ -x "$MANAGER" ] || exit 2
+          "$MANAGER" --install 'build-tools;35.0.0' 'platforms;android-35'
+      - name: Validate hook invariants and entrypoint
+        run: |
+          python3 -m unittest discover -s tools/ui-deployment/op6-runtime-hook-v05/tests -p 'test_*.py' -v
+          sh -n tools/ui-deployment/op6-runtime-hook-v05/build.sh
+      - name: Compile and verify real LSPosed hook APK
+        run: sh tools/ui-deployment/op6-runtime-hook-v05/build.sh
+      - name: Confirm release contains ONLY hook code
+        run: |
+          FILE="tools/ui-deployment/op6-runtime-hook-v05/out/uwuAOSP hotfix v0.5.apk"
+          unzip -t "$FILE"
+          unzip -Z1 "$FILE" | grep -Fx classes.dex
+          unzip -Z1 "$FILE" | grep -Fx assets/xposed_init
+          if unzip -Z1 "$FILE" | grep -E 'SystemUI[.]apk|de/robv/android/xposed/'; then
+              echo 'Unsafe payload or compiled stub'; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uwuAOSP-hotfix-v0.5-hook-APK
+          path: tools/ui-deployment/op6-runtime-hook-v05/out/uwuAOSP hotfix v0.5.apk
+          if-no-files-found: error
