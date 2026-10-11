@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "device": "OnePlus6",
+  "sdk": 37,
+  "build_id": "CP2A.260605.016",
+  "density": 420,
+  "module": {
+    "id": "uwu-ui-live-hotfix",
+    "name_prefix": "uwuAOSP hotfix",
+    "delivery": "single_ksu_zip",
+    "uses_lsp": false,
+    "auto_restart_systemui": false
+  },
+  "originals": {
+    "SystemUI.apk": {
+      "sha256": "47e4e849e99a695b3c698566fb451cf3cd671ddb17f3e5844d15b2b35188f841",
+      "cert_sha256": "fe3d64fede78183bb479dd684f03a1b3fae475b6742e9cba0880a9ca59a91e44"
+    },
+    "Settings.apk": {
+      "sha256": "16b8902482965ce7246e2c2e20bb29b627dbfff7472f9bd90e51ac47adf3ae98",
+      "cert_sha256": "fe3d64fede78183bb479dd684f03a1b3fae475b6742e9cba0880a9ca59a91e44"
+    }
+  },
+  "changes": [
+    {
+      "id": "gesture_pill_resource",
+      "owner": "SystemUI",
+      "route": "rro",
+      "status": "built_ci_not_device_verified",
+      "ship_in_current_zip": true,
+      "needs_runtime_overlay_verification": true
+    },
+    {
+      "id": "dpi_420_once",
+      "owner": "framework-res",
+      "route": "configuration",
+      "status": "existing_one_shot_setting",
+      "ship_in_current_zip": true
+    },
+    {
+      "id": "momentarc_thread_and_cleanup",
+      "owner": "SystemUI",
+      "route": "privileged_apk_code",
+      "status": "source_pr_7_uncompiled",
+      "ship_in_current_zip": false,
+      "requires_matching_signer": true
+    },
+    {
+      "id": "clock_tick_lifecycle",
+      "owner": "SystemUI",
+      "route": "privileged_apk_code",
+      "status": "source_pr_7_uncompiled",
+      "ship_in_current_zip": false,
+      "requires_matching_signer": true
+    },
+    {
+      "id": "systemui_m3e_qs_shade",
+      "owner": "SystemUI",
+      "route": "rro",
+      "status": "runtime_mapping_unverified",
+      "ship_in_current_zip": false,
+      "needs_runtime_overlay_verification": true
+    },
+    {
+      "id": "settings_m3e_appearance",
+      "owner": "Settings",
+      "route": "rro",
+      "status": "runtime_mapping_unverified",
+      "ship_in_current_zip": false,
+      "needs_runtime_overlay_verification": true
+    },
+    {
+      "id": "settings_behavior_and_aosp_entries",
+      "owner": "Settings",
+      "route": "privileged_apk_code",
+      "status": "source_only",
+      "ship_in_current_zip": false,
+      "requires_matching_signer": true
+    },
+    {
+      "id": "launcher_m3e_gesture",
+      "owner": "Launcher3QuickStep",
+      "route": "privileged_apk_code",
+      "status": "source_only",
+      "ship_in_current_zip": false,
+      "requires_matching_signer": true
+    },
+    {
+      "id": "settingsext_m3e_behavior",
+      "owner": "uwuSettingsExt",
+      "route": "privileged_apk_code",
+      "status": "source_only",
+      "ship_in_current_zip": false,
+      "requires_matching_signer": true
+    },
+    {
+      "id": "oneplus_hw_capabilities",
+      "owner": "vendor HAL",
+      "route": "source_and_hal_integration",
+      "status": "not_runtime_verified",
+      "ship_in_current_zip": false
+    }
+  ]
+}

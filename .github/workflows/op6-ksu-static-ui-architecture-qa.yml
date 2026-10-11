@@ -1,0 +1,28 @@
+name: OP6 KernelSU Static UI Feasibility Gates
+on:
+  push:
+    branches: ["design/op6-ksu-static-ui-architecture"]
+    paths:
+      - "tools/ui-deployment/ksu-static-ui/**"
+      - ".github/workflows/op6-ksu-static-ui-architecture-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/ksu-static-ui/**"
+      - ".github/workflows/op6-ksu-static-ui-architecture-qa.yml"
+permissions:
+  contents: read
+jobs:
+  validate-architecture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/ksu-static-ui
+          sparse-checkout-cone-mode: true
+      - name: Gate static overlays vs privileged APK modifications
+        run: python3 tools/ui-deployment/ksu-static-ui/validate_patch_plan.py
+      - name: Six negative and positive regression cases
+        run: python3 -m unittest discover -s tools/ui-deployment/ksu-static-ui -p 'test_patch_plan.py' -v
