@@ -32,6 +32,8 @@ jobs:
           sh -n tools/ui-deployment/ksu-hotfix/post-fs-data.sh
       - name: Simulate upstream OTA compatibility
         run: python3 -m unittest discover -s tools/ui-deployment/tests -p "test_ota_guard.py" -v
+      - name: Independently package components (mock-signed test fixtures)
+        run: python3 -m unittest discover -s tools/ui-deployment/tests -p "test_package_modules.py" -v
       - name: Fail closed without baseline APK pairs
         run: |
           if sh tools/ui-deployment/verify_apk_signatures.sh; then
