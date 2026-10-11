@@ -3,7 +3,7 @@
 # Key must be kept for future APK upgrades; use private persistent signing in production.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-SDK="\${ANDROID_HOME:-\${ANDROID_SDK_ROOT:-}}"
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
 [ -n "$SDK" ] || { echo "ANDROID_HOME missing" >&2; exit 2; }
 TOOLS="$SDK/build-tools/35.0.0"
 AAPT2="$TOOLS/aapt2"
