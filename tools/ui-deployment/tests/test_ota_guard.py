@@ -9,6 +9,11 @@ import unittest
 
 SOURCE = Path(__file__).resolve().parents[1] / "ksu-hotfix" / "post-fs-data.sh"
 TARGET = "/system/system_ext/priv-app/Settings/Settings.apk"
+TARGETS = tuple(
+    f"/system/system_ext/priv-app/{name}/{name}.apk"
+    for name in ("SystemUI", "Settings", "Launcher3QuickStep",
+                 "uwuSettingsExt", "ThemePicker")
+)
 
 class BootGuardTests(unittest.TestCase):
     def setUp(self):
@@ -18,7 +23,7 @@ class BootGuardTests(unittest.TestCase):
         self.mod = self.root / "module"
         self.mod.mkdir()
         shutil.copyfile(SOURCE, self.mod / "post-fs-data.sh")
-        (self.mod / "module.prop").write_text("id=uwu-ui-hotfix-settings\n")
+        (self.mod / "module.prop").write_text("id=uwu-ui-live-hotfix\n")
         mountify = self.root / "rom/data/adb/modules/mountify"
         mountify.mkdir(parents=True)
         (mountify / "metamount.sh").write_text("#!/system/bin/sh\n")
@@ -28,9 +33,21 @@ class BootGuardTests(unittest.TestCase):
         (self.mod / "target.properties").write_text(
             "device=OnePlus6\nsdk=37\nbuild_id=CP2A.260605.016\n"
         )
-        self.apk = self.root / "rom" / TARGET.lstrip("/")
-        self.apk.parent.mkdir(parents=True)
-        self.apk.write_bytes(b"known-good-original-apk")
+        self.apks = {}
+        self.original = {}
+        self.staged = {}
+        for target in TARGETS:
+            original = self.root / "rom" / target.lstrip("/")
+            original.parent.mkdir(parents=True, exist_ok=True)
+            content = b"known-good-original-apk:" + target.encode()
+            original.write_bytes(content)
+            self.apks[target] = original
+            self.original[target] = content
+            staged = self.mod / target.lstrip("/")
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            staged.write_bytes(b"new-original-signer-build:" + target.encode())
+            self.staged[target] = staged
+        self.apk = self.apks[TARGET]
         # A preserved product overlay is a release dependency of the
         # independently signed ThemePicker package (not a UI settings toggle).
         self.prism = self.root / "rom/system/product/overlay/uwuPrism__uwu_enchilada__auto_generated_rro_product.apk"
@@ -45,8 +62,14 @@ class BootGuardTests(unittest.TestCase):
             hashlib.sha256(self.prism.read_bytes()).hexdigest(),
         )
         guard.write_text(text)
-        digest = hashlib.sha256(self.apk.read_bytes()).hexdigest()
-        (self.mod / "base-apks.sha256").write_text(f"{TARGET}|{digest}\n")
+        (self.mod / "base-apks.sha256").write_text(
+            "".join(f"{path}|{hashlib.sha256(self.original[path]).hexdigest()}\n"
+                    for path in TARGETS)
+        )
+        (self.mod / "payload-apks.sha256").write_text(
+            "".join(f"{path}|{hashlib.sha256(self.staged[path].read_bytes()).hexdigest()}\n"
+                    for path in TARGETS)
+        )
         bindir = self.root / "bin"
         bindir.mkdir()
         self.props = bindir / "getprop"
@@ -89,7 +112,7 @@ class BootGuardTests(unittest.TestCase):
     def test_previous_pause_is_sticky(self):
         self.apk.write_bytes(b"changed")
         self.run_guard()
-        self.apk.write_bytes(b"known-good-original-apk")
+        self.apk.write_bytes(self.original[TARGET])
         self.assertIn("COMPATIBLE BUT PAUSED", self.run_guard())
         self.assertTrue((self.mod / "skip_mount").exists())
 
@@ -107,7 +130,7 @@ class BootGuardTests(unittest.TestCase):
     def test_manual_mode_with_module_id_allows(self):
         config = self.root / "rom/data/adb/mountify"
         (config / "config.sh").write_text("mountify_mounts=1\n")
-        (config / "modules.txt").write_text("uwu-ui-hotfix-settings\n")
+        (config / "modules.txt").write_text("uwu-ui-live-hotfix\n")
         self.assertTrue(self.run_guard().startswith("COMPATIBLE:"))
 
     def test_mountify_disabled_blocks(self):
@@ -122,6 +145,30 @@ class BootGuardTests(unittest.TestCase):
     def test_missing_prism_overlay_blocks(self):
         self.prism.unlink()
         self.assertIn("ThemePicker color overlay missing", self.run_guard())
+
+    def test_removed_component_refuses_mount(self):
+        self.staged[TARGETS[-1]].unlink()
+        self.assertIn("staged signed APK missing", self.run_guard())
+
+    def test_incomplete_base_manifest_refuses_mount(self):
+        p=self.mod/"base-apks.sha256"
+        p.write_text("\n".join(p.read_text().splitlines()[:-1])+"\n")
+        self.assertIn("incomplete five-component baseline manifest", self.run_guard())
+
+    def test_duplicate_original_entry_refuses_mount(self):
+        p=self.mod/"base-apks.sha256"
+        p.write_text(p.read_text()+p.read_text().splitlines()[0]+"\n")
+        self.assertIn("duplicate baseline APK target", self.run_guard())
+
+    def test_duplicate_payload_entry_refuses_mount(self):
+        p=self.mod/"payload-apks.sha256"
+        p.write_text(p.read_text()+p.read_text().splitlines()[0]+"\n")
+        self.assertIn("duplicate payload APK target", self.run_guard())
+
+    def test_incomplete_payload_manifest_refuses_mount(self):
+        p=self.mod/"payload-apks.sha256"
+        p.write_text("\n".join(p.read_text().splitlines()[:-1])+"\n")
+        self.assertIn("incomplete five-component payload manifest", self.run_guard())
 
     def test_unknown_target_blocks(self):
         (self.mod / "base-apks.sha256").write_text("/system/etc/passwd|abc\n")
