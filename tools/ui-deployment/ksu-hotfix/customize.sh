@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # KernelSU Installer entrypoint; sourced in the manager, no arguments.
-ui_print '  uwuAOSP hotfix v0.6 - native KSU/Mountify'
+ui_print '  uwuAOSP hotfix v0.7 - native KSU/Mountify'
 case "$(getprop ro.product.device)" in OnePlus6|enchilada) :;; *) abort 'OnePlus 6 only';; esac
 [ "$(getprop ro.build.version.sdk)" = 37 ] || abort 'Android 17 API 37 required'
 [ "$(getprop ro.build.id)" = CP2A.260605.016 ] || abort 'Unknown ROM build; revalidate after OTA'
