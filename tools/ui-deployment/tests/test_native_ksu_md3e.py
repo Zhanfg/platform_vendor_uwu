@@ -80,6 +80,24 @@ class NativeHotfixContract(unittest.TestCase):
             r=subprocess.run(["sh","-n",str(f)],capture_output=True,text=True)
             self.assertEqual(r.returncode,0,f"{f}: {r.stderr}")
 
+    def test_complete_five_app_boot_and_package_identity(self):
+        self.assertIn('aapt2 dump packagename', VERIFY)
+        self.assertIn('BLOCKED package identity mismatch', VERIFY)
+        self.assertIn('SystemUI.apk:com.android.systemui', VERIFY)
+        self.assertIn('Settings.apk:com.android.settings', VERIFY)
+        self.assertIn('incomplete five-component baseline manifest', GUARD)
+        self.assertIn('duplicate baseline APK target', GUARD)
+        self.assertIn('incomplete five-component payload manifest', GUARD)
+        self.assertIn('staged signed APK missing', GUARD)
+        self.assertIn('rm -f "$FINAL"', PKG)
+        self.assertIn('.uwuAOSP-hotfix-v0.7.$.zip', PKG)
+        self.assertIn('uwu-sdk-md3e-input-tonal-focus.patch', LOCK)
+
+    def test_runtime_will_not_activate_partial_mount(self):
+        self.assertIn('count" -eq 5', SERVICE)
+        self.assertIn('incomplete five-component native mount', SERVICE)
+        self.assertIn('duplicate payload target', SERVICE)
+
     def test_missing_real_apks_cannot_build_release(self):
         # Calling the packager against an unpopulated staging directory
         # must always fail. Do NOT turn absent binaries into fake modules.
