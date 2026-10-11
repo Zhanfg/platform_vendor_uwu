@@ -32,7 +32,7 @@ for apk in "$BUILT"/*.apk; do
     [ -f "$apk" ] || continue
     case "${apk##*/}" in
         SystemUI.apk|Settings.apk|Launcher3QuickStep.apk|uwuSettingsExt.apk) : ;;
-        *) echo "Unexpected APK ${apk##*/}" >&2; exit 4 ;;
+        *) echo "Unrecognized APK ${apk##*/}" >&2; exit 4 ;;
     esac
 done
 # A zero-diff APK should not take space on the phone; other APKs must
