@@ -1,0 +1,40 @@
+name: OP6 Live Hotfix Installable ZIP QA
+
+on:
+  push:
+    branches: ["feat/op6-ui-livehotfix-v01"]
+    paths:
+      - "tools/ui-deployment/op6-livehotfix-v01/**"
+      - ".github/workflows/op6-livehotfix-v01-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/op6-livehotfix-v01/**"
+      - ".github/workflows/op6-livehotfix-v01-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment/op6-livehotfix-v01
+          sparse-checkout-cone-mode: true
+      - name: Validate sh scripts
+        run: |
+          for f in tools/ui-deployment/op6-livehotfix-v01/*.sh; do sh -n "$f"; done
+      - name: Run mocked Android settings and OTA checks
+        run: |
+          python3 -m unittest discover -s tools/ui-deployment/op6-livehotfix-v01/tests -p test_hotfix.py -v
+      - name: Build one installable module
+        run: |
+          sh tools/ui-deployment/op6-livehotfix-v01/package.sh
+          unzip -t tools/ui-deployment/op6-livehotfix-v01/uwuAOSP_OP6_UI_LiveHotfix_v0.1_KSU.zip
+          if unzip -Z1 tools/ui-deployment/op6-livehotfix-v01/uwuAOSP_OP6_UI_LiveHotfix_v0.1_KSU.zip | grep '^system/'; then
+            echo 'Unexpected system mount payload'; exit 1
+          fi
