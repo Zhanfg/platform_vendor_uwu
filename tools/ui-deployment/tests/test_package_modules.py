@@ -90,6 +90,30 @@ class PackagerTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((self.tree / "out/uwu-ui-hotfix-oneplus6.zip").exists())
 
+    def test_component_toggle_moves_bytes_without_duplication(self):
+        self.apk("SystemUI.apk")
+        self.apk("Settings.apk")
+        result = self.run_pack()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        mod = self.base / "installed_module"
+        mod.mkdir()
+        with ZipFile(self.tree / "out/uwu-ui-hotfix-oneplus6.zip") as z:
+            z.extractall(mod)
+        path = Path("system_ext/priv-app/Settings/Settings.apk")
+        live = mod / "system" / path
+        inactive = mod / "inactive/system" / path
+        self.assertTrue(live.is_file())
+        toggle = lambda: subprocess.run(
+            ["sh", str(mod / "action.sh")],
+            input="2\n", capture_output=True, text=True
+        )
+        self.assertEqual(toggle().returncode, 0)
+        self.assertFalse(live.exists())
+        self.assertTrue(inactive.is_file())
+        self.assertEqual(toggle().returncode, 0)
+        self.assertTrue(live.is_file())
+        self.assertFalse(inactive.exists())
+
     def test_signature_mismatch_blocks_package(self):
         self.apk("Settings.apk", bad_signer=True)
         result = self.run_pack()
