@@ -1,0 +1,44 @@
+name: UI Deployment Tooling Static QA
+
+on:
+  push:
+    branches: ["feat/**"]
+    paths:
+      - "tools/ui-deployment/**"
+      - ".github/workflows/ui-deploy-tooling-qa.yml"
+  pull_request:
+    paths:
+      - "tools/ui-deployment/**"
+      - ".github/workflows/ui-deploy-tooling-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            tools/ui-deployment
+          sparse-checkout-cone-mode: true
+      - name: POSIX shell syntax
+        run: |
+          sh -n tools/ui-deployment/verify_apk_signatures.sh
+          sh -n tools/ui-deployment/package_ui_hotfix.sh
+          sh -n tools/ui-deployment/ksu-hotfix/post-fs-data.sh
+          sh -n tools/ui-deployment/ksu-hotfix/action.sh
+          sh -n tools/ui-deployment/ksu-hotfix/late-load.sh
+      - name: Simulate upstream OTA compatibility
+        run: python3 -m unittest discover -s tools/ui-deployment/tests -p "test_ota_guard.py" -v
+      - name: Independently package components (mock-signed test fixtures)
+        run: python3 -m unittest discover -s tools/ui-deployment/tests -p "test_package_modules.py" -v
+      - name: Fail closed without baseline APK pairs
+        run: |
+          if sh tools/ui-deployment/verify_apk_signatures.sh; then
+            echo "Preflight must not pass without originals and built APKs" >&2
+            exit 1
+          fi

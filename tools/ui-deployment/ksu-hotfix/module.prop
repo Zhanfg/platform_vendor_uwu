@@ -1,0 +1,6 @@
+id=uwu-ui-hotfix
+name=uwuAOSP UI Hotfix (OTA-aware)
+version=0.1.0-dev
+versionCode=10
+author=AXYMORSEN UI Engineering
+description=Guarded systemless UI hotfix; pauses on unexpected ROM or APK hashes.

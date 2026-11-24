@@ -1,0 +1,7 @@
+staging/
+*.apk
+*.apks
+*.aab
+*.zip
+*.pk8
+*.pem
